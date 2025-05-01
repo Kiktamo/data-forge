@@ -1,0 +1,166 @@
+<div class="auth-container">
+    <mat-card class="auth-card">
+      <mat-card-header>
+        <mat-card-title>Create Account</mat-card-title>
+        <mat-card-subtitle>Join DataForge to start contributing to datasets</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <mat-stepper linear #stepper>
+          <!-- Step 1: Account Information -->
+          <mat-step [stepControl]="accountForm" label="Account Information">
+            <form [formGroup]="accountForm" class="auth-form">
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Email</mat-label>
+                <input 
+                  matInput 
+                  type="email" 
+                  placeholder="your.email@example.com" 
+                  formControlName="email"
+                  autocomplete="email"
+                >
+                <mat-icon matPrefix>email</mat-icon>
+                <mat-error *ngIf="email?.errors?.['required']">Email is required</mat-error>
+                <mat-error *ngIf="email?.errors?.['email']">Please enter a valid email address</mat-error>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Username</mat-label>
+                <input 
+                  matInput 
+                  placeholder="username" 
+                  formControlName="username"
+                  autocomplete="username"
+                >
+                <mat-icon matPrefix>person</mat-icon>
+                <mat-error *ngIf="username?.errors?.['required']">Username is required</mat-error>
+                <mat-error *ngIf="username?.errors?.['minlength']">Username must be at least 3 characters</mat-error>
+                <mat-error *ngIf="username?.errors?.['maxlength']">Username must be less than 20 characters</mat-error>
+                <mat-error *ngIf="username?.errors?.['pattern']">Username can only contain letters, numbers, underscores, and hyphens</mat-error>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Password</mat-label>
+                <input 
+                  matInput 
+                  [type]="hidePassword ? 'password' : 'text'" 
+                  formControlName="password"
+                  autocomplete="new-password"
+                >
+                <mat-icon matPrefix>lock</mat-icon>
+                <button 
+                  type="button"
+                  mat-icon-button 
+                  matSuffix 
+                  (click)="hidePassword = !hidePassword"
+                  [attr.aria-label]="'Hide password'"
+                  [attr.aria-pressed]="hidePassword"
+                >
+                  <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+                </button>
+                <mat-error *ngIf="password?.errors?.['required']">Password is required</mat-error>
+                <mat-error *ngIf="password?.errors?.['minlength']">Password must be at least 8 characters</mat-error>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Confirm Password</mat-label>
+                <input 
+                  matInput 
+                  [type]="hideConfirmPassword ? 'password' : 'text'" 
+                  formControlName="confirmPassword"
+                  autocomplete="new-password"
+                >
+                <mat-icon matPrefix>lock</mat-icon>
+                <button 
+                  type="button"
+                  mat-icon-button 
+                  matSuffix 
+                  (click)="hideConfirmPassword = !hideConfirmPassword"
+                  [attr.aria-label]="'Hide confirm password'"
+                  [attr.aria-pressed]="hideConfirmPassword"
+                >
+                  <mat-icon>{{hideConfirmPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+                </button>
+                <mat-error *ngIf="confirmPassword?.errors?.['required']">Please confirm your password</mat-error>
+                <mat-error *ngIf="!passwordsMatch && !confirmPassword?.errors?.['required']">Passwords do not match</mat-error>
+              </mat-form-field>
+              
+              <div class="form-actions">
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  matStepperNext
+                  class="next-button"
+                  [disabled]="accountForm.invalid"
+                >
+                  Next
+                </button>
+              </div>
+            </form>
+          </mat-step>
+          
+          <!-- Step 2: Profile Information -->
+          <mat-step [stepControl]="profileForm" label="Profile Information">
+            <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="auth-form">
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Full Name</mat-label>
+                <input 
+                  matInput 
+                  placeholder="John Doe" 
+                  formControlName="fullName"
+                  autocomplete="name"
+                >
+                <mat-icon matPrefix>badge</mat-icon>
+                <mat-error *ngIf="fullName?.errors?.['required']">Full name is required</mat-error>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Bio (Optional)</mat-label>
+                <textarea 
+                  matInput 
+                  rows="3"
+                  placeholder="Tell us about yourself..." 
+                  formControlName="bio"
+                ></textarea>
+                <mat-icon matPrefix>description</mat-icon>
+              </mat-form-field>
+              
+              <div class="terms-container">
+                <mat-checkbox formControlName="acceptTerms" color="primary">
+                  I accept the <a routerLink="/terms" target="_blank">Terms of Service</a> and <a routerLink="/privacy" target="_blank">Privacy Policy</a>
+                </mat-checkbox>
+                <mat-error *ngIf="acceptTerms?.errors?.['required'] && acceptTerms?.touched">
+                  You must accept the terms to continue
+                </mat-error>
+              </div>
+              
+              <div class="stepper-actions">
+                <button 
+                  mat-button 
+                  matStepperPrevious
+                  type="button"
+                >
+                  Back
+                </button>
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  type="submit" 
+                  class="submit-button"
+                  [disabled]="profileForm.invalid || isLoading"
+                >
+                  <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
+                  <span *ngIf="!isLoading">Create Account</span>
+                </button>
+              </div>
+            </form>
+          </mat-step>
+        </mat-stepper>
+      </mat-card-content>
+      
+      <mat-card-actions class="auth-card-actions">
+        <span>Already have an account?</span>
+        <a mat-button color="primary" routerLink="/auth/login">Log In</a>
+      </mat-card-actions>
+    </mat-card>
+  </div>

@@ -1,0 +1,124 @@
+.auth-container {
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px;
+  }
+  
+  .auth-card {
+    width: 100%;
+    max-width: 480px;
+    border-radius: 8px;
+  }
+  
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    margin-top: 16px;
+  }
+  
+  .form-field {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .forgot-password {
+    color: #3f51b5;
+    text-decoration: none;
+    font-size: 0.875rem;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .submit-button {
+    width: 100%;
+    padding: 8px 0;
+    font-size: 1rem;
+  }
+  
+  .auth-card-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    
+    span {
+      color: rgba(0, 0, 0, 0.6);
+      margin-right: 8px;
+    }
+  }
+  
+  .auth-card-footer {
+    padding: 0 16px 24px;
+  }
+  
+  .alternative-options {
+    margin-top: 16px;
+  }
+  
+  .divider {
+    position: relative;
+    text-align: center;
+    margin: 24px 0;
+    
+    &:before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background-color: rgba(0, 0, 0, 0.12);
+    }
+    
+    span {
+      position: relative;
+      background-color: white;
+      padding: 0 16px;
+      color: rgba(0, 0, 0, 0.6);
+      font-size: 0.875rem;
+    }
+  }
+  
+  .social-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  
+  .social-button {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 599px) {
+    .form-options {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .social-buttons {
+      flex-direction: column;
+    }
+  }

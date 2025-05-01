@@ -1,0 +1,92 @@
+<div class="auth-container">
+    <mat-card class="auth-card">
+      <mat-card-header>
+        <mat-card-title>Log In to DataForge</mat-card-title>
+        <mat-card-subtitle>Welcome back! Please enter your credentials to continue.</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Email</mat-label>
+            <input 
+              matInput 
+              type="email" 
+              placeholder="your.email@example.com" 
+              formControlName="email"
+              autocomplete="email"
+            >
+            <mat-icon matPrefix>email</mat-icon>
+            <mat-error *ngIf="email?.errors?.['required']">Email is required</mat-error>
+            <mat-error *ngIf="email?.errors?.['email']">Please enter a valid email address</mat-error>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Password</mat-label>
+            <input 
+              matInput 
+              [type]="hidePassword ? 'password' : 'text'" 
+              formControlName="password"
+              autocomplete="current-password"
+            >
+            <mat-icon matPrefix>lock</mat-icon>
+            <button 
+              type="button"
+              mat-icon-button 
+              matSuffix 
+              (click)="hidePassword = !hidePassword"
+              [attr.aria-label]="'Hide password'"
+              [attr.aria-pressed]="hidePassword"
+            >
+              <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+            </button>
+            <mat-error *ngIf="password?.errors?.['required']">Password is required</mat-error>
+            <mat-error *ngIf="password?.errors?.['minlength']">Password must be at least 8 characters</mat-error>
+          </mat-form-field>
+          
+          <div class="form-options">
+            <mat-checkbox formControlName="rememberMe" color="primary">Remember me</mat-checkbox>
+            <a routerLink="/auth/reset-password" class="forgot-password">Forgot password?</a>
+          </div>
+          
+          <div class="form-actions">
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit" 
+              class="submit-button"
+              [disabled]="isLoading"
+            >
+              <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
+              <span *ngIf="!isLoading">Log In</span>
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+      
+      <mat-card-actions class="auth-card-actions">
+        <span>Don't have an account?</span>
+        <a mat-button color="primary" routerLink="/auth/register">Create Account</a>
+      </mat-card-actions>
+      
+      <!-- Optional section for alternative login methods -->
+      <mat-card-footer class="auth-card-footer">
+        <div class="alternative-options">
+          <div class="divider">
+            <span>or continue with</span>
+          </div>
+          <div class="social-buttons">
+            <button mat-stroked-button class="social-button">
+              <mat-icon>g_mobiledata</mat-icon> Google
+            </button>
+            <button mat-stroked-button class="social-button">
+              <mat-icon>facebook</mat-icon> Facebook
+            </button>
+            <button mat-stroked-button class="social-button">
+              <mat-icon>alternate_email</mat-icon> GitHub
+            </button>
+          </div>
+        </div>
+      </mat-card-footer>
+    </mat-card>
+  </div>

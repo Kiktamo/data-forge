@@ -1,0 +1,166 @@
+<div class="dataset-list-container">
+    <div class="dataset-list-header">
+      <h1 class="page-title">Datasets</h1>
+      <a mat-raised-button color="primary" routerLink="/datasets/new">
+        <mat-icon>add</mat-icon> New Dataset
+      </a>
+    </div>
+    
+    <mat-tab-group>
+      <mat-tab label="All Datasets">
+        <!-- Filter controls -->
+        <div class="filters-container">
+          <div class="search-box">
+            <mat-form-field appearance="outline">
+              <mat-label>Search datasets</mat-label>
+              <input 
+                matInput 
+                [(ngModel)]="searchQuery" 
+                (keyup.enter)="applyFilters()"
+                placeholder="Search by name, description, or tags"
+              >
+              <button 
+                *ngIf="searchQuery" 
+                matSuffix 
+                mat-icon-button 
+                aria-label="Clear" 
+                (click)="searchQuery=''; applyFilters()"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+          </div>
+          
+          <div class="filter-controls">
+            <mat-form-field appearance="outline">
+              <mat-label>Data Type</mat-label>
+              <mat-select [(ngModel)]="selectedDataType" (selectionChange)="applyFilters()">
+                <mat-option *ngFor="let option of dataTypeOptions" [value]="option.value">
+                  {{ option.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline">
+              <mat-label>Sort by</mat-label>
+              <mat-select [(ngModel)]="selectedSortOption" (selectionChange)="applyFilters()">
+                <mat-option *ngFor="let option of sortOptions" [value]="option.value">
+                  {{ option.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            
+            <button 
+              mat-stroked-button 
+              color="primary" 
+              class="reset-button" 
+              [disabled]="!searchQuery && !selectedDataType && selectedSortOption === 'newest'"
+              (click)="resetFilters()"
+            >
+              <mat-icon>refresh</mat-icon> Reset
+            </button>
+          </div>
+        </div>
+        
+        <!-- Loading spinner -->
+        <div class="spinner-container" *ngIf="isLoading">
+          <mat-spinner diameter="40"></mat-spinner>
+        </div>
+        
+        <!-- No results message -->
+        <div class="no-results" *ngIf="!isLoading && filteredDatasets.length === 0">
+          <mat-icon>search_off</mat-icon>
+          <h3>No datasets found</h3>
+          <p>Try adjusting your search criteria or create a new dataset.</p>
+          <button mat-raised-button color="primary" routerLink="/datasets/new">Create Dataset</button>
+        </div>
+        
+        <!-- Datasets grid -->
+        <div class="datasets-grid" *ngIf="!isLoading && filteredDatasets.length > 0">
+          <mat-card class="dataset-card" *ngFor="let dataset of filteredDatasets">
+            <mat-card-content>
+              <div class="dataset-header">
+                <div class="dataset-type-icon" [ngClass]="dataset.dataType">
+                  <mat-icon>
+                    {{ dataset.dataType === 'image' ? 'image' : dataset.dataType === 'text' ? 'text_fields' : 'table_chart' }}
+                  </mat-icon>
+                </div>
+                <div class="dataset-visibility">
+                  <mat-icon matTooltip="'Visibility: ' + dataset.visibility">
+                    {{ dataset.visibility === 'public' ? 'public' : dataset.visibility === 'private' ? 'lock' : 'group' }}
+                  </mat-icon>
+                </div>
+              </div>
+              
+              <h3 class="dataset-name">{{ dataset.name }}</h3>
+              
+              <p class="dataset-description">{{ dataset.description }}</p>
+              
+              <div class="dataset-tags">
+                <mat-chip-set>
+                  <mat-chip *ngFor="let tag of dataset.tags">{{ tag }}</mat-chip>
+                </mat-chip-set>
+              </div>
+              
+              <div class="dataset-meta">
+                <div class="meta-item">
+                  <mat-icon>person</mat-icon>
+                  <span>{{ dataset.ownerName }}</span>
+                </div>
+                <div class="meta-item">
+                  <mat-icon>list</mat-icon>
+                  <span>{{ dataset.contributionCount | number }} contributions</span>
+                </div>
+                <div class="meta-item">
+                  <mat-icon>calendar_today</mat-icon>
+                  <span>{{ dataset.createdAt | date }}</span>
+                </div>
+              </div>
+            </mat-card-content>
+            
+            <mat-card-actions align="end">
+              <a mat-button color="primary" [routerLink]="['/datasets', dataset.id]">View Details</a>
+              <a mat-button color="accent" [routerLink]="['/datasets', dataset.id, 'contribute']">Contribute</a>
+            </mat-card-actions>
+          </mat-card>
+        </div>
+        
+        <!-- Pagination controls -->
+        <mat-paginator 
+          *ngIf="!isLoading && totalDatasets > 0"
+          [length]="totalDatasets"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          [pageIndex]="pageIndex"
+          (page)="onPageChange($event)"
+          aria-label="Select page"
+        >
+        </mat-paginator>
+      </mat-tab>
+      
+      <mat-tab label="My Datasets">
+        <div class="auth-required-message" *ngIf="true"> <!-- Replace with !authService.isAuthenticated() in real implementation -->
+          <mat-icon>account_circle</mat-icon>
+          <h3>Authentication Required</h3>
+          <p>Please log in or create an account to view your datasets.</p>
+          <div class="auth-actions">
+            <a mat-raised-button color="primary" routerLink="/auth/login">Log In</a>
+            <a mat-stroked-button color="primary" routerLink="/auth/register">Create Account</a>
+          </div>
+        </div>
+      </mat-tab>
+      
+      <mat-tab label="Contributions">
+        <div class="auth-required-message" *ngIf="true"> <!-- Replace with !authService.isAuthenticated() in real implementation -->
+          <mat-icon>account_circle</mat-icon>
+          <h3>Authentication Required</h3>
+          <p>Please log in or create an account to view your contributions.</p>
+          <div class="auth-actions">
+            <a mat-raised-button color="primary" routerLink="/auth/login">Log In</a>
+            <a mat-stroked-button color="primary" routerLink="/auth/register">Create Account</a>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>

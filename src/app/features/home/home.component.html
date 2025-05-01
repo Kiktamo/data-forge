@@ -1,0 +1,102 @@
+<div class="home-container">
+    <!-- Hero section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <h1 class="hero-title">Building Better Datasets Together</h1>
+        <p class="hero-subtitle">
+          DataForge is a collaborative platform for creating high-quality, ethical, and diverse datasets for machine learning
+        </p>
+        <div class="hero-actions">
+          <a mat-raised-button color="primary" routerLink="/auth/register">Get Started</a>
+          <a mat-stroked-button color="primary" routerLink="/explore">Explore Datasets</a>
+        </div>
+      </div>
+      <div class="hero-image">
+        <!-- Placeholder for hero image -->
+        <div class="image-placeholder">
+          <mat-icon>dataset</mat-icon>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Features section -->
+    <section class="features-section">
+      <h2 class="section-title">Why Choose DataForge?</h2>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <mat-icon class="feature-icon">group</mat-icon>
+          <h3>Collaborative Creation</h3>
+          <p>Work together with others to build better datasets through direct contributions and feedback.</p>
+        </div>
+        
+        <div class="feature-card">
+          <mat-icon class="feature-icon">verified</mat-icon>
+          <h3>Quality Validation</h3>
+          <p>Multi-user verification processes ensure high-quality data through consensus validation.</p>
+        </div>
+        
+        <div class="feature-card">
+          <mat-icon class="feature-icon">history</mat-icon>
+          <h3>Dataset Versioning</h3>
+          <p>Track changes and maintain different versions of your datasets as they evolve.</p>
+        </div>
+        
+        <div class="feature-card">
+          <mat-icon class="feature-icon">equalizer</mat-icon>
+          <h3>Quality Metrics</h3>
+          <p>Automated assessment tools to evaluate and improve dataset quality and completeness.</p>
+        </div>
+        
+        <div class="feature-card">
+          <mat-icon class="feature-icon">balance</mat-icon>
+          <h3>Bias Detection</h3>
+          <p>Tools to identify and address potential biases in your datasets before they impact ML models.</p>
+        </div>
+        
+        <div class="feature-card">
+          <mat-icon class="feature-icon">download</mat-icon>
+          <h3>Easy Export</h3>
+          <p>Download datasets in formats compatible with popular machine learning frameworks.</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Featured datasets section -->
+    <section class="datasets-section">
+      <div class="section-header">
+        <h2 class="section-title">Featured Datasets</h2>
+        <a mat-button color="primary" routerLink="/datasets">View All Datasets</a>
+      </div>
+      
+      <div class="datasets-grid">
+        <mat-card class="dataset-card" *ngFor="let dataset of featuredDatasets">
+          <div class="dataset-thumbnail">
+            <!-- Use a placeholder for now -->
+            <div class="thumbnail-placeholder">
+              <mat-icon>{{ dataset.dataType === 'image' ? 'image' : dataset.dataType === 'text' ? 'text_fields' : 'table_chart' }}</mat-icon>
+            </div>
+          </div>
+          
+          <mat-card-content>
+            <h3 class="dataset-name">{{ dataset.name }}</h3>
+            <p class="dataset-description">{{ dataset.description }}</p>
+            <div class="dataset-meta">
+              <span class="dataset-type">
+                <mat-icon>{{ dataset.dataType === 'image' ? 'image' : dataset.dataType === 'text' ? 'text_fields' : 'table_chart' }}</mat-icon>
+                {{ dataset.dataType | titlecase }}
+              </span>
+              <span class="dataset-count">
+                <mat-icon>list</mat-icon>
+                {{ dataset.contributionCount | number }} contributions
+              </span>
+            </div>
+          </mat-card-content>
+          
+          <mat-card-actions align="end">
+            <a mat-button color="primary" [routerLink]="['/datasets', dataset.id]">View Dataset</a>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+    </section>
+  </div>

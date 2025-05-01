@@ -1,59 +1,108 @@
-# DataForge
+# DataForge: Collaborative Dataset Creation & Curation Platform
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.9.
+DataForge is a web-based platform that enables researchers, data scientists, and organizations to collaboratively build, refine, and curate datasets for machine learning through direct contribution and feedback.
 
-## Development server
+## Project Vision
 
-To start a local development server, run:
+DataForge addresses a critical gap in the machine learning ecosystem: the lack of platforms for ethical, transparent, and collaborative dataset creation. While many AI platforms focus on model training or hosting pre-existing datasets, few emphasize the crucial process of dataset creation itself.
 
+Current dataset creation methods often rely on web scraping, which raises ethical concerns regarding consent, copyright, and bias. DataForge provides a platform where users can actively opt-in to contributing data, collaboratively curate and validate datasets, and ensure proper attribution throughout the process.
+
+## Key Features
+
+- **User Contribution System**: Intuitive interfaces for uploading and annotating different data types
+- **Validation Workflows**: Multi-user verification processes to ensure data quality
+- **Dataset Versioning**: Tracking changes and maintaining different versions of datasets
+- **Quality Metrics**: Automated assessment of dataset quality and completeness
+- **Bias Detection**: Tools to identify and address potential biases in datasets
+- **Export Functionality**: Options to download datasets in formats compatible with popular ML frameworks
+- **Attribution Management**: Systems to track and credit contributions appropriately
+
+## Technologies
+
+### Frontend
+- Angular 19
+- Angular Material
+- NgRx for state management
+- RxJS for reactive programming
+- TypeScript
+
+### Backend
+- Node.js with Express
+- PostgreSQL database
+- Sequelize ORM
+- JWT authentication
+- RESTful API design
+
+## Project Status
+
+This project is currently in the initial development phase as part of a senior project course. As such some of the following instructions and details are redundant and unfunctional at the moment.
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v16+)
+- npm or yarn
+- PostgreSQL
+
+### Installation
+
+1. Clone the repository
 ```bash
-ng serve
+git clone https://github.com/Kiktamo/data-forge.git
+cd data-forge
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
+2. Install frontend dependencies
 ```bash
-ng generate component component-name
+npm install
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
+3. Install backend dependencies
 ```bash
-ng generate --help
+cd server
+npm install
 ```
 
-## Building
-
-To build the project run:
-
+4. Configure environment variables
 ```bash
-ng build
+# Create .env file in the server directory
+cp server/.env.example server/.env
+# Edit the .env file with your database credentials and other settings
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
+5. Start the development server
 ```bash
-ng test
+# Start the backend server
+cd server
+npm run dev
+
+# In a separate terminal, start the frontend
+cd ..
+npm start
 ```
 
-## Running end-to-end tests
+6. Open your browser and navigate to `http://localhost:4200`
 
-For end-to-end (e2e) testing, run:
+## Development Roadmap
 
-```bash
-ng e2e
-```
+- Week 1-2: Project Setup and Planning
+- Week 3-4: Core Authentication and User System
+- Week 5-6: Basic Dataset Management
+- Week 7: Technology Prototype
+- Week 8-9: Data Contribution Interfaces
+- Week 10-11: Data Processing and Export
+- Week 12: Testing and Finalization
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## Contributing
 
-## Additional Resources
+This project is currently being developed as part of an academic course. Contributions will be welcome after the initial version is completed.
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [BYU-Idaho CSE Department](https://www.byui.edu/computer-science-electrical-engineering-department) for providing the opportunity to work on this senior project
+- All the open-source libraries and frameworks that make this project possible

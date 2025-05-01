@@ -1,0 +1,284 @@
+.dataset-list-container {
+    width: 100%;
+  }
+  
+  .dataset-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .page-title {
+    font-size: 2rem;
+    font-weight: 500;
+    margin: 0;
+    color: #333;
+  }
+  
+  .filters-container {
+    margin: 24px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .search-box {
+    flex: 1;
+    min-width: 300px;
+    
+    mat-form-field {
+      width: 100%;
+    }
+  }
+  
+  .filter-controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    
+    mat-form-field {
+      width: 180px;
+    }
+    
+    .reset-button {
+      margin-top: 4px;
+    }
+  }
+  
+  .spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 48px;
+  }
+  
+  .no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 0;
+    text-align: center;
+    
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      color: rgba(0, 0, 0, 0.38);
+    }
+    
+    h3 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      color: rgba(0, 0, 0, 0.87);
+    }
+    
+    p {
+      margin-bottom: 24px;
+      color: rgba(0, 0, 0, 0.6);
+      max-width: 400px;
+    }
+  }
+  
+  .datasets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  
+  .dataset-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+    
+    mat-card-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+  
+  .dataset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .dataset-type-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    
+    &.image {
+      background-color: rgba(103, 58, 183, 0.1);
+      
+      mat-icon {
+        color: #673ab7;
+      }
+    }
+    
+    &.text {
+      background-color: rgba(33, 150, 243, 0.1);
+      
+      mat-icon {
+        color: #2196f3;
+      }
+    }
+    
+    &.structured {
+      background-color: rgba(76, 175, 80, 0.1);
+      
+      mat-icon {
+        color: #4caf50;
+      }
+    }
+    
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+  
+  .dataset-visibility {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: rgba(0, 0, 0, 0.54);
+  }
+  
+  .dataset-name {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: rgba(0, 0, 0, 0.87);
+  }
+  
+  .dataset-description {
+    flex: 1;
+    margin-bottom: 16px;
+    color: rgba(0, 0, 0, 0.6);
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  
+  .dataset-tags {
+    margin-bottom: 16px;
+    
+    mat-chip-set {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    ::ng-deep {
+      .mat-mdc-chip {
+        font-size: 0.75rem;
+        height: 24px;
+        min-height: 24px;
+      }
+    }
+  }
+  
+  .dataset-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 8px;
+    color: rgba(0, 0, 0, 0.54);
+    font-size: 0.875rem;
+  }
+  
+  .meta-item {
+    display: flex;
+    align-items: center;
+    
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+    }
+  }
+  
+  .auth-required-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 0;
+    text-align: center;
+    
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      color: rgba(0, 0, 0, 0.38);
+    }
+    
+    h3 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      color: rgba(0, 0, 0, 0.87);
+    }
+    
+    p {
+      margin-bottom: 24px;
+      color: rgba(0, 0, 0, 0.6);
+      max-width: 400px;
+    }
+    
+    .auth-actions {
+      display: flex;
+      gap: 16px;
+    }
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 768px) {
+    .dataset-list-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .filters-container {
+      flex-direction: column;
+    }
+    
+    .filter-controls {
+      flex-wrap: wrap;
+      
+      mat-form-field {
+        width: 100%;
+        min-width: 200px;
+      }
+      
+      .reset-button {
+        width: 100%;
+      }
+    }
+    
+    .datasets-grid {
+      grid-template-columns: 1fr;
+    }
+  }
