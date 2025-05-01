@@ -104,5 +104,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- [BYU-Idaho CSE Department](https://www.byui.edu/computer-science-electrical-engineering-department) for providing the opportunity to work on this senior project
+- [BYU-Idaho CSE Department](https://www.byui.edu/computer-science-engineering/) for providing the opportunity to work on this senior project
 - All the open-source libraries and frameworks that make this project possible
