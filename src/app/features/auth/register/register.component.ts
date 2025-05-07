@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatStepperModule } from '@angular/material/stepper';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -37,7 +38,7 @@ export class RegisterComponent {
   hidePassword = true;
   hideConfirmPassword = true;
   
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private authService: AuthService) {
     // First step - account information
     this.accountForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -75,12 +76,9 @@ export class RegisterComponent {
       // Remove confirmPassword field
       delete registrationData.confirmPassword;
       
-      // Simulate registration request
-      setTimeout(() => {
-        console.log('Registration form submitted:', registrationData);
-        this.isLoading = false;
-        
-      }, 1500);
+      this.authService.register(registrationData.username, registrationData.email, registrationData.password, registrationData.fullName, registrationData?.bio).subscribe(
+        response => { console.log('Registration successful', response); this.isLoading = false; },
+        error => { console.error('Registration failed', error); this.isLoading = false; });
     } else {
       // Mark all form controls as touched to trigger validation messages
       Object.keys(this.accountForm.controls).forEach(key => {
