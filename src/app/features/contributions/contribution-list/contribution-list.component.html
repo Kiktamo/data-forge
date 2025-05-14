@@ -1,0 +1,203 @@
+<div class="contributions-container">
+  <h1 class="page-title">My Contributions</h1>
+  
+  <!-- Loading spinner -->
+  <div class="spinner-container" *ngIf="isLoading">
+    <mat-spinner></mat-spinner>
+  </div>
+  
+  <div *ngIf="!isLoading">
+    <mat-tab-group>
+      <mat-tab label="All Contributions">
+        <!-- Empty state -->
+        <div class="empty-state" *ngIf="contributions.length === 0">
+          <mat-icon>history</mat-icon>
+          <h2>No contributions yet</h2>
+          <p>You haven't made any contributions to datasets yet. Explore datasets and start contributing!</p>
+          <a mat-raised-button color="primary" routerLink="/datasets">
+            Explore Datasets
+          </a>
+        </div>
+        
+        <!-- Contributions list -->
+        <div class="contributions-list" *ngIf="contributions.length > 0">
+          <mat-card *ngFor="let contribution of contributions" class="contribution-card">
+            <div class="contribution-header">
+              <div [ngClass]="['contribution-type', contribution.contentType]">
+                <mat-icon>{{ getContentTypeIcon(contribution.contentType) }}</mat-icon>
+              </div>
+              <div class="contribution-dataset">
+                <a [routerLink]="['/datasets', contribution.datasetId]">{{ contribution.datasetName }}</a>
+              </div>
+              <div [ngClass]="['contribution-status', getStatusClass(contribution.status)]">
+                <span class="status-dot"></span>
+                <span class="status-text">{{ contribution.status | titlecase }}</span>
+              </div>
+            </div>
+            
+            <div class="contribution-meta">
+              <div class="meta-item">
+                <mat-icon>calendar_today</mat-icon>
+                <span>{{ contribution.contributionDate | date }}</span>
+              </div>
+              <div class="meta-item">
+                <mat-icon>verified</mat-icon>
+                <span>{{ contribution.validationCount }} validations</span>
+              </div>
+            </div>
+            
+            <mat-card-actions>
+              <a mat-button color="primary" [routerLink]="['/contributions', contribution.id]">
+                View Details
+              </a>
+            </mat-card-actions>
+          </mat-card>
+        </div>
+      </mat-tab>
+      
+      <mat-tab label="Pending">
+        <div class="tab-content">
+          <p class="tab-message">Showing only pending contributions that are awaiting validation.</p>
+          
+          <!-- Filter for pending contributions -->
+          <div class="contributions-list">
+            <mat-card *ngFor="let contribution of pendingContributions" class="contribution-card">
+              <div class="contribution-header">
+                <div [ngClass]="['contribution-type', contribution.contentType]">
+                  <mat-icon>{{ getContentTypeIcon(contribution.contentType) }}</mat-icon>
+                </div>
+                <div class="contribution-dataset">
+                  <a [routerLink]="['/datasets', contribution.datasetId]">{{ contribution.datasetName }}</a>
+                </div>
+                <div class="contribution-status status-pending">
+                  <span class="status-dot"></span>
+                  <span class="status-text">Pending</span>
+                </div>
+              </div>
+              
+              <div class="contribution-meta">
+                <div class="meta-item">
+                  <mat-icon>calendar_today</mat-icon>
+                  <span>{{ contribution.contributionDate | date }}</span>
+                </div>
+                <div class="meta-item">
+                  <mat-icon>verified</mat-icon>
+                  <span>{{ contribution.validationCount }} validations</span>
+                </div>
+              </div>
+              
+              <mat-card-actions>
+                <a mat-button color="primary" [routerLink]="['/contributions', contribution.id]">
+                  View Details
+                </a>
+              </mat-card-actions>
+            </mat-card>
+            
+            <!-- Empty state for pending tab -->
+            <div class="empty-state" *ngIf="pendingContributions.length === 0">
+              <mat-icon>check_circle</mat-icon>
+              <h2>No pending contributions</h2>
+              <p>All your contributions have been reviewed!</p>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+      
+      <mat-tab label="Approved">
+        <div class="tab-content">
+          <p class="tab-message">Showing only approved contributions that have passed validation.</p>
+          
+          <!-- Filter for approved contributions -->
+          <div class="contributions-list">
+            <mat-card *ngFor="let contribution of approvedContributions" class="contribution-card">
+              <div class="contribution-header">
+                <div [ngClass]="['contribution-type', contribution.contentType]">
+                  <mat-icon>{{ getContentTypeIcon(contribution.contentType) }}</mat-icon>
+                </div>
+                <div class="contribution-dataset">
+                  <a [routerLink]="['/datasets', contribution.datasetId]">{{ contribution.datasetName }}</a>
+                </div>
+                <div class="contribution-status status-approved">
+                  <span class="status-dot"></span>
+                  <span class="status-text">Approved</span>
+                </div>
+              </div>
+              
+              <div class="contribution-meta">
+                <div class="meta-item">
+                  <mat-icon>calendar_today</mat-icon>
+                  <span>{{ contribution.contributionDate | date }}</span>
+                </div>
+                <div class="meta-item">
+                  <mat-icon>verified</mat-icon>
+                  <span>{{ contribution.validationCount }} validations</span>
+                </div>
+              </div>
+              
+              <mat-card-actions>
+                <a mat-button color="primary" [routerLink]="['/contributions', contribution.id]">
+                  View Details
+                </a>
+              </mat-card-actions>
+            </mat-card>
+            
+            <!-- Empty state for approved tab -->
+            <div class="empty-state" *ngIf="approvedContributions.length === 0">
+              <mat-icon>hourglass_empty</mat-icon>
+              <h2>No approved contributions</h2>
+              <p>Keep contributing! Your submissions will appear here once approved.</p>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+      
+      <mat-tab label="Rejected">
+        <div class="tab-content">
+          <p class="tab-message">Showing only rejected contributions that did not pass validation.</p>
+          
+          <!-- Filter for rejected contributions -->
+          <div class="contributions-list">
+            <mat-card *ngFor="let contribution of rejectedContributions" class="contribution-card">
+              <div class="contribution-header">
+                <div [ngClass]="['contribution-type', contribution.contentType]">
+                  <mat-icon>{{ getContentTypeIcon(contribution.contentType) }}</mat-icon>
+                </div>
+                <div class="contribution-dataset">
+                  <a [routerLink]="['/datasets', contribution.datasetId]">{{ contribution.datasetName }}</a>
+                </div>
+                <div class="contribution-status status-rejected">
+                  <span class="status-dot"></span>
+                  <span class="status-text">Rejected</span>
+                </div>
+              </div>
+              
+              <div class="contribution-meta">
+                <div class="meta-item">
+                  <mat-icon>calendar_today</mat-icon>
+                  <span>{{ contribution.contributionDate | date }}</span>
+                </div>
+                <div class="meta-item">
+                  <mat-icon>verified</mat-icon>
+                  <span>{{ contribution.validationCount }} validations</span>
+                </div>
+              </div>
+              
+              <mat-card-actions>
+                <a mat-button color="primary" [routerLink]="['/contributions', contribution.id]">
+                  View Details
+                </a>
+              </mat-card-actions>
+            </mat-card>
+            
+            <!-- Empty state for rejected tab -->
+            <div class="empty-state" *ngIf="rejectedContributions.length === 0">
+              <mat-icon>thumb_up</mat-icon>
+              <h2>No rejected contributions</h2>
+              <p>Great job! None of your contributions have been rejected.</p>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>

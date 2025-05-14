@@ -1,84 +1,103 @@
 <mat-toolbar color="primary" class="header-toolbar">
-    <div class="header-container">
-      <!-- Logo and branding -->
-      <div class="brand">
-        <a routerLink="/" class="logo-link">
-          <span class="logo-text">DataForge</span>
-        </a>
-        <span class="tagline">Dataset Creation & Curation</span>
-      </div>
-  
-      <!-- Navigation for desktop -->
-      <nav class="desktop-nav">
-        <a mat-button routerLink="/datasets" routerLinkActive="active">Datasets</a>
-        <a mat-button routerLink="/explore" routerLinkActive="active">Explore</a>
-        <a mat-button routerLink="/docs" routerLinkActive="active">Documentation</a>
-      </nav>
-      
-      <!-- Auth buttons for desktop -->
-      <div class="auth-buttons">
-        <!-- Show if not authenticated -->
-        <ng-container *ngIf="!auth.isAuthenticated()">
-          <a mat-button routerLink="/auth/login">Log In</a>
-          <a mat-raised-button color="accent" routerLink="/auth/register">Sign Up</a>
-        </ng-container>
-        
-        <!-- Show if authenticated -->
-        <ng-container *ngIf="auth.isAuthenticated()">
-          <button mat-button [matMenuTriggerFor]="userMenu">
-            <span>{{ auth.currentUser?.username || 'User' }}</span>
-            <mat-icon>arrow_drop_down</mat-icon>
-          </button>
-          <mat-menu #userMenu="matMenu">
-            <a mat-menu-item routerLink="/profile">Profile</a>
-            <a mat-menu-item routerLink="/datasets/my">My Datasets</a>
-            <a mat-menu-item routerLink="/contributions">My Contributions</a>
-            <button mat-menu-item>Log Out</button>
-          </mat-menu>
-          <a mat-raised-button color="accent" routerLink="/datasets/new">
-            <mat-icon>add</mat-icon> New Dataset
-          </a>
-        </ng-container>
-      </div>
-      
-      <!-- Mobile menu toggle -->
-      <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMenu()">
-        <mat-icon>menu</mat-icon>
-      </button>
+  <div class="header-container">
+    <!-- Logo and branding -->
+    <div class="brand">
+      <a routerLink="/" class="logo-link">
+        <span class="logo-text">DataForge</span>
+      </a>
+      <span class="tagline">Dataset Creation & Curation</span>
     </div>
-  </mat-toolbar>
-  
-  <!-- Mobile navigation drawer -->
-  <div class="mobile-nav" [class.open]="(isMenuOpen | async)">
-    <div class="mobile-nav-header">
-      <span class="mobile-logo">DataForge</span>
-      <button mat-icon-button (click)="toggleMenu()">
-        <mat-icon>close</mat-icon>
-      </button>
+
+    <!-- Navigation for desktop -->
+    <nav class="desktop-nav">
+      <a mat-button routerLink="/datasets" routerLinkActive="active">Datasets</a>
+      <a mat-button routerLink="/explore" routerLinkActive="active">Explore</a>
+      <a mat-button routerLink="/docs" routerLinkActive="active">Documentation</a>
+    </nav>
+    
+    <!-- Auth buttons for desktop -->
+    <div class="auth-buttons">
+      <!-- Show if not authenticated -->
+      <ng-container *ngIf="!authService.isAuthenticated()">
+        <a mat-button routerLink="/auth/login">Log In</a>
+        <a mat-raised-button color="accent" routerLink="/auth/register">Sign Up</a>
+      </ng-container>
+      
+      <!-- Show if authenticated -->
+      <ng-container *ngIf="authService.isAuthenticated()">
+        <button mat-button [matMenuTriggerFor]="userMenu">
+          <span>{{ currentUser?.username || 'User' }}</span>
+          <mat-icon>arrow_drop_down</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <a mat-menu-item routerLink="/auth/profile">
+            <mat-icon>account_circle</mat-icon>
+            <span>Profile</span>
+          </a>
+          <a mat-menu-item routerLink="/datasets/my">
+            <mat-icon>folder</mat-icon>
+            <span>My Datasets</span>
+          </a>
+          <a mat-menu-item routerLink="/contributions">
+            <mat-icon>history</mat-icon>
+            <span>My Contributions</span>
+          </a>
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>exit_to_app</mat-icon>
+            <span>Log Out</span>
+          </button>
+        </mat-menu>
+        <a mat-raised-button color="accent" routerLink="/datasets/new">
+          <mat-icon>add</mat-icon> New Dataset
+        </a>
+      </ng-container>
     </div>
     
-    <nav class="mobile-nav-links">
-      <a routerLink="/datasets" routerLinkActive="active" (click)="toggleMenu()">Datasets</a>
-      <a routerLink="/explore" routerLinkActive="active" (click)="toggleMenu()">Explore</a>
-      <a routerLink="/docs" routerLinkActive="active" (click)="toggleMenu()">Documentation</a>
-      
-      <!-- Auth links -->
-      <div class="mobile-auth-links">
-        <ng-container *ngIf="!auth.isAuthenticated()">
-          <a routerLink="/auth/login" (click)="toggleMenu()">Log In</a>
-          <a routerLink="/auth/register" (click)="toggleMenu()">Sign Up</a>
-        </ng-container>
-        
-        <ng-container *ngIf="auth.isAuthenticated()">
-          <a routerLink="/profile" (click)="toggleMenu()">Profile</a>
-          <a routerLink="/datasets/my" (click)="toggleMenu()">My Datasets</a>
-          <a routerLink="/contributions" (click)="toggleMenu()">My Contributions</a>
-          <a routerLink="/datasets/new" (click)="toggleMenu()">New Dataset</a>
-          <button class="logout-button" (click)="toggleMenu()">Log Out</button>
-        </ng-container>
-      </div>
-    </nav>
+    <!-- Mobile menu toggle -->
+    <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMenu()">
+      <mat-icon>menu</mat-icon>
+    </button>
+  </div>
+</mat-toolbar>
+
+<!-- Mobile navigation drawer -->
+<div class="mobile-nav" [class.open]="(isMenuOpen | async)">
+  <div class="mobile-nav-header">
+    <span class="mobile-logo">DataForge</span>
+    <button mat-icon-button (click)="toggleMenu()">
+      <mat-icon>close</mat-icon>
+    </button>
   </div>
   
-  <!-- Overlay for mobile menu -->
-  <div class="mobile-nav-overlay" [class.visible]="(isMenuOpen | async)" (click)="toggleMenu()"></div>
+  <nav class="mobile-nav-links">
+    <a routerLink="/datasets" routerLinkActive="active" (click)="toggleMenu()">Datasets</a>
+    <a routerLink="/explore" routerLinkActive="active" (click)="toggleMenu()">Explore</a>
+    <a routerLink="/docs" routerLinkActive="active" (click)="toggleMenu()">Documentation</a>
+    
+    <!-- Auth links -->
+    <div class="mobile-auth-links">
+      <ng-container *ngIf="!authService.isAuthenticated()">
+        <a routerLink="/auth/login" (click)="toggleMenu()">Log In</a>
+        <a routerLink="/auth/register" (click)="toggleMenu()">Sign Up</a>
+      </ng-container>
+      
+      <ng-container *ngIf="authService.isAuthenticated()">
+        <div class="mobile-user-info">
+          <div class="mobile-avatar">
+            <mat-icon>account_circle</mat-icon>
+          </div>
+          <div class="mobile-username">{{ currentUser?.username || 'User' }}</div>
+        </div>
+        
+        <a routerLink="/auth/profile" (click)="toggleMenu()">Profile</a>
+        <a routerLink="/datasets/my" (click)="toggleMenu()">My Datasets</a>
+        <a routerLink="/contributions" (click)="toggleMenu()">My Contributions</a>
+        <a routerLink="/datasets/new" (click)="toggleMenu()">New Dataset</a>
+        <button class="logout-button" (click)="logout()">Log Out</button>
+      </ng-container>
+    </div>
+  </nav>
+</div>
+
+<!-- Overlay for mobile menu -->
+<div class="mobile-nav-overlay" [class.visible]="(isMenuOpen | async)" (click)="toggleMenu()"></div>
