@@ -46,13 +46,6 @@ export class LoginComponent {
     if (this.loginForm.valid) {
       this.isLoading = true;
       
-      // Simulate login request
-      setTimeout(() => {
-        console.log('Login form submitted:', this.loginForm.value);
-        this.isLoading = false;
-
-      }, 1500);
-
       // Call the AuthService login method here
       this.authService.login(this.loginForm.value.email, this.loginForm.value.password).subscribe(
         response => { console.log('Login successful', response); this.isLoading = false; },

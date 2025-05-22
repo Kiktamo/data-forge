@@ -1,116 +1,130 @@
-const { verifyAccessToken } = require('../config/jwt');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
+const { verifyAccessToken } = require('../config/jwt');
 
-// Middleware to authenticate users based on JWT
-exports.authenticate = async (req, res, next) => {
+// Required authentication middleware
+const authenticate = async (req, res, next) => {
   try {
-    // Get authorization header
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required. Please provide a valid token.'
-      });
-    }
-    
-    // Extract the token
-    const token = authHeader.split(' ')[1];
+    const token = extractToken(req);
     
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Authentication required. Please provide a valid token.'
+        message: 'Access token required'
       });
     }
-    
-    // Verify the token
+
+    // Use the JWT config's verifyAccessToken function
     const decoded = verifyAccessToken(token);
     
-    // Find the user
+    // Get user from database using the 'id' field from JWT payload
     const user = await User.findByPk(decoded.id);
     
     if (!user || !user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'User not found or account inactive'
+        message: 'Invalid or expired token'
       });
     }
-    
-    // Attach user to request object
-    req.user = decoded;
-    
+
+    // Attach user to request
+    req.user = user;
     next();
   } catch (error) {
     console.error('Authentication error:', error);
-    return res.status(401).json({
+    
+    if (error.message === 'Invalid access token' || error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
+      });
+    }
+    
+    return res.status(500).json({
       success: false,
-      message: 'Invalid or expired token',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Authentication failed'
     });
   }
 };
 
-// Middleware to check if user has required roles
-exports.authorize = (requiredRoles = []) => {
+// Optional authentication middleware - doesn't fail if no token
+const optionalAuth = async (req, res, next) => {
+  try {
+    const token = extractToken(req);
+    
+    if (!token) {
+      // No token provided, continue without user
+      return next();
+    }
+
+    // Use the JWT config's verifyAccessToken function
+    const decoded = verifyAccessToken(token);
+    
+    // Get user from database using the 'id' field from JWT payload
+    const user = await User.findByPk(decoded.id);
+    
+    if (user && user.isActive) {
+      // Attach user to request if valid
+      req.user = user;
+    }
+    
+    // Continue regardless of token validity
+    next();
+  } catch (error) {
+    // Log error but don't fail the request
+    console.error('Optional authentication error:', error);
+    next();
+  }
+};
+
+// Helper function to extract token from request
+const extractToken = (req) => {
+  const authHeader = req.headers.authorization;
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  return null;
+};
+
+// Role-based authorization middleware
+const authorize = (roles = []) => {
   return (req, res, next) => {
-    // If no roles required, proceed
-    if (requiredRoles.length === 0) {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (roles.length === 0 || !Array.isArray(roles)) {
       return next();
     }
-    
-    const { roles } = req.user;
-    
-    // Check if user has admin role (bypass)
-    if (roles && roles.includes('admin')) {
-      return next();
-    }
-    
-    // Check if user has any of the required roles
-    const hasRequiredRole = requiredRoles.some(role => roles && roles.includes(role));
-    
+
+    const userRoles = req.user.roles || [];
+    const hasRequiredRole = roles.some(role => userRoles.includes(role));
+
     if (!hasRequiredRole) {
       return res.status(403).json({
         success: false,
-        message: 'You do not have permission to access this resource'
+        message: 'Insufficient permissions'
       });
     }
-    
+
     next();
   };
 };
 
-// Middleware to validate email verification
-exports.requireEmailVerification = async (req, res, next) => {
-  try {
-    const { id } = req.user;
-    
-    // Find the user
-    const user = await User.findByPk(id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-    
-    // Check if email is verified
-    if (!user.emailVerified) {
-      return res.status(403).json({
-        success: false,
-        message: 'Email verification required',
-        emailVerificationRequired: true
-      });
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Email verification check error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'An error occurred while checking email verification',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
+module.exports = {
+  authenticate,
+  optionalAuth,
+  authorize
 };

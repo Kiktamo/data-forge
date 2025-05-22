@@ -1,166 +1,224 @@
 <div class="dataset-list-container">
-    <div class="dataset-list-header">
-      <h1 class="page-title">Datasets</h1>
-      <a mat-raised-button color="primary" routerLink="/datasets/new">
-        <mat-icon>add</mat-icon> New Dataset
-      </a>
+  <div class="dataset-list-header">
+    <h1 class="page-title">
+      {{ isMyDatasetsMode ? 'My Datasets' : 'Datasets' }}
+    </h1>
+    <a 
+      mat-raised-button 
+      color="primary" 
+      routerLink="/datasets/new"
+      *ngIf="authService.isAuthenticated()"
+    >
+      <mat-icon>add</mat-icon> New Dataset
+    </a>
+  </div>
+  
+  <!-- Filter controls -->
+  <div class="filters-container">
+    <div class="search-box">
+      <mat-form-field appearance="outline">
+        <mat-label>Search datasets</mat-label>
+        <input 
+          matInput 
+          [value]="searchQuery"
+          (input)="onSearchInput($event)"
+          placeholder="Search by name, description, or tags"
+        >
+        <button 
+          *ngIf="searchQuery" 
+          matSuffix 
+          mat-icon-button 
+          aria-label="Clear" 
+          (click)="clearSearch()"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+        <mat-icon matPrefix>search</mat-icon>
+      </mat-form-field>
     </div>
     
-    <mat-tab-group>
-      <mat-tab label="All Datasets">
-        <!-- Filter controls -->
-        <div class="filters-container">
-          <div class="search-box">
-            <mat-form-field appearance="outline">
-              <mat-label>Search datasets</mat-label>
-              <input 
-                matInput 
-                [(ngModel)]="searchQuery" 
-                (keyup.enter)="applyFilters()"
-                placeholder="Search by name, description, or tags"
-              >
-              <button 
-                *ngIf="searchQuery" 
-                matSuffix 
-                mat-icon-button 
-                aria-label="Clear" 
-                (click)="searchQuery=''; applyFilters()"
-              >
-                <mat-icon>close</mat-icon>
-              </button>
-              <mat-icon matPrefix>search</mat-icon>
-            </mat-form-field>
+    <div class="filter-controls">
+      <mat-form-field appearance="outline">
+        <mat-label>Data Type</mat-label>
+        <mat-select [(ngModel)]="selectedDataType" (selectionChange)="applyFilters()">
+          <mat-option *ngFor="let option of dataTypeOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      
+      <mat-form-field appearance="outline" *ngIf="!isMyDatasetsMode">
+        <mat-label>Visibility</mat-label>
+        <mat-select [(ngModel)]="selectedVisibility" (selectionChange)="applyFilters()">
+          <mat-option *ngFor="let option of visibilityOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      
+      <mat-form-field appearance="outline">
+        <mat-label>Sort by</mat-label>
+        <mat-select [(ngModel)]="selectedSortBy" (selectionChange)="applyFilters()">
+          <mat-option *ngFor="let option of sortOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      
+      <button 
+        mat-stroked-button 
+        color="primary" 
+        class="reset-button" 
+        [disabled]="!hasActiveFilters"
+        (click)="resetFilters()"
+      >
+        <mat-icon>refresh</mat-icon> Reset
+      </button>
+    </div>
+  </div>
+  
+  <!-- Loading spinner -->
+  <div class="spinner-container" *ngIf="isLoading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading datasets...</p>
+  </div>
+  
+  <!-- Authentication required message for my datasets -->
+  <div class="auth-required-message" *ngIf="isMyDatasetsMode && !authService.isAuthenticated()">
+    <mat-icon>account_circle</mat-icon>
+    <h3>Authentication Required</h3>
+    <p>Please log in to view your datasets.</p>
+    <div class="auth-actions">
+      <a mat-raised-button color="primary" routerLink="/auth/login">Log In</a>
+      <a mat-stroked-button color="primary" routerLink="/auth/register">Create Account</a>
+    </div>
+  </div>
+  
+  <!-- No results message -->
+  <div class="no-results" *ngIf="!isLoading && datasets.length === 0 && (authService.isAuthenticated() || !isMyDatasetsMode)">
+    <mat-icon>{{ hasActiveFilters ? 'search_off' : 'dataset' }}</mat-icon>
+    <h3>{{ hasActiveFilters ? 'No datasets found' : 'No datasets available' }}</h3>
+    <p *ngIf="hasActiveFilters">Try adjusting your search criteria or create a new dataset.</p>
+    <p *ngIf="!hasActiveFilters && isMyDatasetsMode">You haven't created any datasets yet.</p>
+    <p *ngIf="!hasActiveFilters && !isMyDatasetsMode">No public datasets are available at the moment.</p>
+    <div class="no-results-actions">
+      <button 
+        mat-raised-button 
+        color="primary" 
+        routerLink="/datasets/new"
+        *ngIf="authService.isAuthenticated()"
+      >
+        Create Dataset
+      </button>
+      <button 
+        mat-stroked-button 
+        color="primary" 
+        (click)="resetFilters()"
+        *ngIf="hasActiveFilters"
+      >
+        Clear Filters
+      </button>
+    </div>
+  </div>
+  
+  <!-- Datasets grid -->
+  <div class="datasets-grid" *ngIf="!isLoading && datasets.length > 0">
+    <mat-card class="dataset-card" *ngFor="let dataset of datasets">
+      <mat-card-content>
+        <div class="dataset-header">
+          <div class="dataset-type-icon" [ngClass]="dataset.dataType">
+            <mat-icon>{{ getDataTypeIcon(dataset.dataType) }}</mat-icon>
           </div>
-          
-          <div class="filter-controls">
-            <mat-form-field appearance="outline">
-              <mat-label>Data Type</mat-label>
-              <mat-select [(ngModel)]="selectedDataType" (selectionChange)="applyFilters()">
-                <mat-option *ngFor="let option of dataTypeOptions" [value]="option.value">
-                  {{ option.label }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-            
-            <mat-form-field appearance="outline">
-              <mat-label>Sort by</mat-label>
-              <mat-select [(ngModel)]="selectedSortOption" (selectionChange)="applyFilters()">
-                <mat-option *ngFor="let option of sortOptions" [value]="option.value">
-                  {{ option.label }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-            
+          <div class="dataset-actions" *ngIf="canEditDataset(dataset)">
             <button 
-              mat-stroked-button 
-              color="primary" 
-              class="reset-button" 
-              [disabled]="!searchQuery && !selectedDataType && selectedSortOption === 'newest'"
-              (click)="resetFilters()"
+              mat-icon-button 
+              [routerLink]="['/datasets', dataset.id, 'edit']"
+              matTooltip="Edit dataset"
             >
-              <mat-icon>refresh</mat-icon> Reset
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              color="warn"
+              (click)="deleteDataset(dataset, $event)"
+              matTooltip="Delete dataset"
+            >
+              <mat-icon>delete</mat-icon>
             </button>
           </div>
+          <div class="dataset-visibility">
+            <mat-icon [matTooltip]="'Visibility: ' + dataset.visibility">
+              {{ getVisibilityIcon(dataset.visibility) }}
+            </mat-icon>
+          </div>
         </div>
         
-        <!-- Loading spinner -->
-        <div class="spinner-container" *ngIf="isLoading">
-          <mat-spinner diameter="40"></mat-spinner>
+        <h3 class="dataset-name">{{ dataset.name }}</h3>
+        
+        <p class="dataset-description" *ngIf="dataset.description">
+          {{ dataset.description.length > 120 ? (dataset.description | slice:0:120) + '...' : dataset.description }}
+        </p>
+        
+        <div class="dataset-tags" *ngIf="dataset.tags && dataset.tags.length > 0">
+          <mat-chip-set>
+            <mat-chip *ngFor="let tag of dataset.tags.slice(0, 3)">{{ tag }}</mat-chip>
+            <mat-chip *ngIf="dataset.tags.length > 3" class="more-tags">
+              +{{ dataset.tags.length - 3 }} more
+            </mat-chip>
+          </mat-chip-set>
         </div>
         
-        <!-- No results message -->
-        <div class="no-results" *ngIf="!isLoading && filteredDatasets.length === 0">
-          <mat-icon>search_off</mat-icon>
-          <h3>No datasets found</h3>
-          <p>Try adjusting your search criteria or create a new dataset.</p>
-          <button mat-raised-button color="primary" routerLink="/datasets/new">Create Dataset</button>
+        <div class="dataset-meta">
+          <div class="meta-item">
+            <mat-icon>person</mat-icon>
+            <span>{{ getOwnerDisplayName(dataset) }}</span>
+          </div>
+          <div class="meta-item">
+            <mat-icon>list</mat-icon>
+            <span>{{ dataset.contributionCount | number }} contributions</span>
+          </div>
+          <div class="meta-item">
+            <mat-icon>verified</mat-icon>
+            <span>{{ dataset.validationCount | number }} validated</span>
+          </div>
+          <div class="meta-item">
+            <mat-icon>schedule</mat-icon>
+            <span>{{ dataset.updatedAt | date:'short' }}</span>
+          </div>
         </div>
         
-        <!-- Datasets grid -->
-        <div class="datasets-grid" *ngIf="!isLoading && filteredDatasets.length > 0">
-          <mat-card class="dataset-card" *ngFor="let dataset of filteredDatasets">
-            <mat-card-content>
-              <div class="dataset-header">
-                <div class="dataset-type-icon" [ngClass]="dataset.dataType">
-                  <mat-icon>
-                    {{ dataset.dataType === 'image' ? 'image' : dataset.dataType === 'text' ? 'text_fields' : 'table_chart' }}
-                  </mat-icon>
-                </div>
-                <div class="dataset-visibility">
-                  <mat-icon matTooltip="'Visibility: ' + dataset.visibility">
-                    {{ dataset.visibility === 'public' ? 'public' : dataset.visibility === 'private' ? 'lock' : 'group' }}
-                  </mat-icon>
-                </div>
-              </div>
-              
-              <h3 class="dataset-name">{{ dataset.name }}</h3>
-              
-              <p class="dataset-description">{{ dataset.description }}</p>
-              
-              <div class="dataset-tags">
-                <mat-chip-set>
-                  <mat-chip *ngFor="let tag of dataset.tags">{{ tag }}</mat-chip>
-                </mat-chip-set>
-              </div>
-              
-              <div class="dataset-meta">
-                <div class="meta-item">
-                  <mat-icon>person</mat-icon>
-                  <span>{{ dataset.ownerName }}</span>
-                </div>
-                <div class="meta-item">
-                  <mat-icon>list</mat-icon>
-                  <span>{{ dataset.contributionCount | number }} contributions</span>
-                </div>
-                <div class="meta-item">
-                  <mat-icon>calendar_today</mat-icon>
-                  <span>{{ dataset.createdAt | date }}</span>
-                </div>
-              </div>
-            </mat-card-content>
-            
-            <mat-card-actions align="end">
-              <a mat-button color="primary" [routerLink]="['/datasets', dataset.id]">View Details</a>
-              <a mat-button color="accent" [routerLink]="['/datasets', dataset.id, 'contribute']">Contribute</a>
-            </mat-card-actions>
-          </mat-card>
+        <div class="dataset-version">
+          <mat-icon>tag</mat-icon>
+          <span>v{{ dataset.currentVersion }}</span>
         </div>
-        
-        <!-- Pagination controls -->
-        <mat-paginator 
-          *ngIf="!isLoading && totalDatasets > 0"
-          [length]="totalDatasets"
-          [pageSize]="pageSize"
-          [pageSizeOptions]="pageSizeOptions"
-          [pageIndex]="pageIndex"
-          (page)="onPageChange($event)"
-          aria-label="Select page"
+      </mat-card-content>
+      
+      <mat-card-actions align="end">
+        <a mat-button color="primary" [routerLink]="['/datasets', dataset.id]">
+          View Details
+        </a>
+        <a 
+          mat-button 
+          color="accent" 
+          [routerLink]="['/datasets', dataset.id, 'contribute']"
+          *ngIf="canContributeToDataset(dataset)"
         >
-        </mat-paginator>
-      </mat-tab>
-      
-      <mat-tab label="My Datasets">
-        <div class="auth-required-message" *ngIf="true"> <!-- Replace with !authService.isAuthenticated() in real implementation -->
-          <mat-icon>account_circle</mat-icon>
-          <h3>Authentication Required</h3>
-          <p>Please log in or create an account to view your datasets.</p>
-          <div class="auth-actions">
-            <a mat-raised-button color="primary" routerLink="/auth/login">Log In</a>
-            <a mat-stroked-button color="primary" routerLink="/auth/register">Create Account</a>
-          </div>
-        </div>
-      </mat-tab>
-      
-      <mat-tab label="Contributions">
-        <div class="auth-required-message" *ngIf="true"> <!-- Replace with !authService.isAuthenticated() in real implementation -->
-          <mat-icon>account_circle</mat-icon>
-          <h3>Authentication Required</h3>
-          <p>Please log in or create an account to view your contributions.</p>
-          <div class="auth-actions">
-            <a mat-raised-button color="primary" routerLink="/auth/login">Log In</a>
-            <a mat-stroked-button color="primary" routerLink="/auth/register">Create Account</a>
-          </div>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
+          Contribute
+        </a>
+      </mat-card-actions>
+    </mat-card>
   </div>
+  
+  <!-- Pagination controls -->
+  <mat-paginator 
+    *ngIf="!isLoading && totalItems > 0"
+    [length]="totalItems"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="pageSizeOptions"
+    [pageIndex]="currentPage - 1"
+    (page)="onPageChange($event)"
+    aria-label="Select page"
+    showFirstLastButtons
+  >
+  </mat-paginator>
+</div>

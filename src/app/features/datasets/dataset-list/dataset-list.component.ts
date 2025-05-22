@@ -1,12 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil, switchMap } from 'rxjs';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -14,21 +15,11 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar'
 
-// This would be provided by the dataset service in the real implementation
-interface Dataset {
-  id: string;
-  name: string;
-  description: string;
-  dataType: 'image' | 'text' | 'structured';
-  visibility: 'public' | 'private' | 'collaborative';
-  contributionCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-  ownerId: string;
-  ownerName: string;
-  tags: string[];
-}
+import { Dataset, DatasetQueryParams } from '../../../core/models/dataset.model';
+import { DatasetService } from '../../../core/services/dataset.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-dataset-list',
@@ -41,34 +32,45 @@ interface Dataset {
     MatCardModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
     MatInputModule,
     MatFormFieldModule,
     MatSelectModule,
     MatChipsModule,
     MatPaginatorModule,
     MatProgressSpinnerModule,
-    MatTabsModule
+    MatTabsModule,
+    MatSnackBarModule
   ],
   templateUrl: './dataset-list.component.html',
   styleUrls: ['./dataset-list.component.scss']
 })
-export class DatasetListComponent implements OnInit {
-  // Mock data for datasets
-  datasets: Dataset[] = [];
-  filteredDatasets: Dataset[] = [];
-  isLoading = true;
+export class DatasetListComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  private searchSubject = new Subject<string>();
   
-  // Pagination settings
+  // Data properties
+  datasets: Dataset[] = [];
+  isLoading = false;
+  isMyDatasetsMode = false;
+  
+  // Pagination
+  currentPage = 1;
   pageSize = 9;
   pageSizeOptions = [3, 6, 9, 12, 24];
-  pageIndex = 0;
-  totalDatasets = 0;
+  totalItems = 0;
+  totalPages = 0;
+  hasNext = false;
+  hasPrev = false;
+  
+  // Filters
+  searchQuery = '';
+  selectedDataType: '' | 'image' | 'text' | 'structured' = '';
+  selectedSortBy = 'updatedAt-DESC';
+  selectedSortOrder = 'DESC';
+  selectedVisibility: '' | 'public' | 'private' | 'collaborative' = '';
   
   // Filter options
-  searchQuery = '';
-  selectedDataType = '';
-  selectedSortOption = 'newest';
-  
   dataTypeOptions = [
     { value: '', label: 'All Types' },
     { value: 'image', label: 'Images' },
@@ -77,126 +79,213 @@ export class DatasetListComponent implements OnInit {
   ];
   
   sortOptions = [
-    { value: 'newest', label: 'Newest First' },
-    { value: 'oldest', label: 'Oldest First' },
-    { value: 'name_asc', label: 'Name (A-Z)' },
-    { value: 'name_desc', label: 'Name (Z-A)' },
-    { value: 'contributions', label: 'Most Contributions' }
+    { value: 'updatedAt-DESC', label: 'Recently Updated' },
+    { value: 'createdAt-DESC', label: 'Newest First' },
+    { value: 'createdAt-ASC', label: 'Oldest First' },
+    { value: 'name-ASC', label: 'Name (A-Z)' },
+    { value: 'name-DESC', label: 'Name (Z-A)' },
+    { value: 'contributionCount-DESC', label: 'Most Contributions' }
+  ];
+
+  visibilityOptions = [
+    { value: '', label: 'All Visibility' },
+    { value: 'public', label: 'Public' },
+    { value: 'collaborative', label: 'Collaborative' }
   ];
   
+  constructor(
+    private datasetService: DatasetService,
+    public authService: AuthService,
+    private snackBar: MatSnackBar,
+    private route: ActivatedRoute
+  ) {}
+  
   ngOnInit(): void {
-    // Simulate loading datasets from API
-    setTimeout(() => {
-      this.datasets = this.generateMockDatasets(30);
-      this.applyFilters();
-      this.isLoading = false;
-    }, 1000);
+    // Check if we're in "my datasets" mode
+    this.isMyDatasetsMode = this.route.snapshot.data['myDatasets'] === true;
+    
+    // Set up search debouncing
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(searchTerm => {
+      this.searchQuery = searchTerm;
+      this.currentPage = 1; // Reset to first page when searching
+      this.loadDatasets();
+    });
+    
+    // Load initial datasets
+    this.loadDatasets();
   }
   
-  // Apply filters and update the filtered datasets
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+  
+  // Load datasets from the API
+  loadDatasets(): void {
+    this.isLoading = true;
+    
+    const [sortBy, sortOrder] = this.selectedSortBy.includes('-') 
+      ? this.selectedSortBy.split('-') as [string, 'ASC' | 'DESC']
+      : [this.selectedSortBy, this.selectedSortOrder as 'ASC' | 'DESC'];
+    
+    const params: DatasetQueryParams = {
+      page: this.currentPage,
+      limit: this.pageSize,
+      search: this.searchQuery || undefined,
+      dataType: this.selectedDataType || undefined,
+      visibility: this.selectedVisibility || undefined,
+      sortBy: sortBy as any,
+      sortOrder: sortOrder
+    };
+    
+    // If in "my datasets" mode, get user's datasets
+    const request$ = this.isMyDatasetsMode && this.authService.currentUser
+      ? this.datasetService.getUserDatasets(Number(this.authService.currentUser.id), params)
+      : this.datasetService.getDatasets(params);
+    
+    request$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        this.datasets = response.data.datasets;
+        this.currentPage = response.data.pagination.currentPage;
+        this.totalItems = response.data.pagination.totalItems;
+        this.totalPages = response.data.pagination.totalPages;
+        this.hasNext = response.data.pagination.hasNext;
+        this.hasPrev = response.data.pagination.hasPrev;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading datasets:', error);
+        this.snackBar.open('Failed to load datasets. Please try again.', 'Close', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+        this.isLoading = false;
+      }
+    });
+  }
+  
+  // Handle search input
+  onSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchSubject.next(target.value);
+  }
+  
+  // Clear search
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.searchSubject.next('');
+  }
+  
+  // Apply filters
   applyFilters(): void {
-    let filtered = [...this.datasets];
-    
-    // Apply search filter
-    if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
-      filtered = filtered.filter(dataset => 
-        dataset.name.toLowerCase().includes(query) || 
-        dataset.description.toLowerCase().includes(query) ||
-        dataset.tags.some(tag => tag.toLowerCase().includes(query))
-      );
-    }
-    
-    // Apply data type filter
-    if (this.selectedDataType) {
-      filtered = filtered.filter(dataset => dataset.dataType === this.selectedDataType);
-    }
-    
-    // Apply sorting
-    switch (this.selectedSortOption) {
-      case 'newest':
-        filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        break;
-      case 'oldest':
-        filtered.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-        break;
-      case 'name_asc':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case 'name_desc':
-        filtered.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      case 'contributions':
-        filtered.sort((a, b) => b.contributionCount - a.contributionCount);
-        break;
-    }
-    
-    this.totalDatasets = filtered.length;
-    
-    // Apply pagination
-    const startIndex = this.pageIndex * this.pageSize;
-    this.filteredDatasets = filtered.slice(startIndex, startIndex + this.pageSize);
+    this.currentPage = 1; // Reset to first page when filters change
+    this.loadDatasets();
   }
   
-  // Handle page event from paginator
+  // Handle page change
   onPageChange(event: PageEvent): void {
-    this.pageIndex = event.pageIndex;
+    this.currentPage = event.pageIndex + 1; // Angular Material paginator is 0-based
     this.pageSize = event.pageSize;
-    this.applyFilters();
+    this.loadDatasets();
   }
   
   // Reset all filters
   resetFilters(): void {
     this.searchQuery = '';
     this.selectedDataType = '';
-    this.selectedSortOption = 'newest';
-    this.pageIndex = 0;
-    this.applyFilters();
+    this.selectedSortBy = 'updatedAt-DESC';
+    this.selectedSortOrder = 'DESC';
+    this.selectedVisibility = '';
+    this.currentPage = 1;
+    this.loadDatasets();
   }
   
-  // Generate mock data for testing
-  private generateMockDatasets(count: number): Dataset[] {
-    const datasets: Dataset[] = [];
-    const dataTypes: Array<'image' | 'text' | 'structured'> = ['image', 'text', 'structured'];
-    const visibilityTypes: Array<'public' | 'private' | 'collaborative'> = ['public', 'private', 'collaborative'];
-    const tagOptions = [
-      'machine-learning', 'deep-learning', 'computer-vision', 'nlp', 'classification', 
-      'regression', 'clustering', 'face-recognition', 'object-detection', 'sentiment-analysis',
-      'medical', 'finance', 'education', 'social-media', 'research'
-    ];
+  // Check if filters are applied
+  get hasActiveFilters(): boolean {
+    return !!(this.searchQuery || this.selectedDataType || this.selectedVisibility || 
+             this.selectedSortBy !== 'updatedAt-DESC' || this.selectedSortOrder !== 'DESC');
+  }
+  
+  // Get display name for dataset owner
+  getOwnerDisplayName(dataset: Dataset): string {
+    if (dataset.owner?.fullName) {
+      return dataset.owner.fullName;
+    }
+    if (dataset.owner?.username) {
+      return dataset.owner.username;
+    }
+    return 'Unknown User';
+  }
+  
+  // Get icon for data type
+  getDataTypeIcon(dataType: string): string {
+    switch (dataType) {
+      case 'image': return 'image';
+      case 'text': return 'text_fields';
+      case 'structured': return 'table_chart';
+      default: return 'dataset';
+    }
+  }
+  
+  // Get icon for visibility
+  getVisibilityIcon(visibility: string): string {
+    switch (visibility) {
+      case 'public': return 'public';
+      case 'private': return 'lock';
+      case 'collaborative': return 'group';
+      default: return 'help';
+    }
+  }
+  
+  // Handle dataset deletion (for owned datasets)
+  deleteDataset(dataset: Dataset, event: Event): void {
+    event.stopPropagation();
     
-    for (let i = 1; i <= count; i++) {
-      const createdAt = new Date();
-      createdAt.setDate(createdAt.getDate() - Math.floor(Math.random() * 365)); // Random date within the last year
-      
-      const updatedAt = new Date(createdAt);
-      updatedAt.setDate(updatedAt.getDate() + Math.floor(Math.random() * 30)); // Random update date after creation
-      
-      // Generate 1-3 random tags
-      const tags: string[] = [];
-      const tagCount = Math.floor(Math.random() * 3) + 1;
-      for (let j = 0; j < tagCount; j++) {
-        const randomTag = tagOptions[Math.floor(Math.random() * tagOptions.length)];
-        if (!tags.includes(randomTag)) {
-          tags.push(randomTag);
-        }
-      }
-      
-      datasets.push({
-        id: `ds-${i}`,
-        name: `Dataset ${i}`,
-        description: `This is a sample dataset #${i} for demonstration purposes. It contains various ${dataTypes[i % 3]} data.`,
-        dataType: dataTypes[i % 3],
-        visibility: visibilityTypes[i % 3],
-        contributionCount: Math.floor(Math.random() * 10000),
-        createdAt,
-        updatedAt,
-        ownerId: `user-${Math.floor(Math.random() * 10) + 1}`,
-        ownerName: `User ${Math.floor(Math.random() * 10) + 1}`,
-        tags
+    if (!this.authService.currentUser || Number(this.authService.currentUser.id) !== dataset.ownerId) {
+      this.snackBar.open('You can only delete your own datasets.', 'Close', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
       });
+      return;
     }
     
-    return datasets;
+    if (confirm(`Are you sure you want to delete "${dataset.name}"? This action cannot be undone.`)) {
+      this.datasetService.deleteDataset(dataset.id).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: () => {
+          this.snackBar.open('Dataset deleted successfully.', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+          this.loadDatasets(); // Reload the list
+        },
+        error: (error) => {
+          console.error('Error deleting dataset:', error);
+          this.snackBar.open('Failed to delete dataset. Please try again.', 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+  
+  // Check if user can edit dataset
+  canEditDataset(dataset: Dataset): boolean {
+    return !!(this.authService.currentUser && 
+             (Number(this.authService.currentUser.id) === dataset.ownerId || 
+              this.authService.hasRole('admin')));
+  }
+  
+  // Check if user can contribute to dataset
+  canContributeToDataset(dataset: Dataset): boolean {
+    return dataset.visibility !== 'private' || this.canEditDataset(dataset);
   }
 }
