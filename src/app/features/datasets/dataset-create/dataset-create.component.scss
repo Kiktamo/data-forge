@@ -1,0 +1,696 @@
+.dataset-create-container {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  min-height: 100vh;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  .page-header {
+    margin-bottom: 32px;
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .back-button {
+        flex-shrink: 0;
+        color: #666;
+        
+        &:hover {
+          color: #1976d2;
+          background-color: rgba(25, 118, 210, 0.04);
+        }
+      }
+
+      .header-text {
+        .page-title {
+          margin: 0 0 4px 0;
+          font-size: 2rem;
+          font-weight: 600;
+          color: #1976d2;
+          line-height: 1.2;
+
+          @media (max-width: 768px) {
+            font-size: 1.5rem;
+          }
+        }
+
+        .page-subtitle {
+          margin: 0;
+          color: #666;
+          font-size: 1rem;
+          line-height: 1.4;
+
+          @media (max-width: 768px) {
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+  }
+
+  .create-form-card {
+    padding: 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+
+    // Override Material stepper styles
+    .mat-stepper-horizontal {
+      .mat-horizontal-stepper-header-container {
+        border-bottom: 1px solid #e0e0e0;
+        background: #fafafa;
+        padding: 0 24px;
+      }
+
+      .mat-stepper-horizontal-line {
+        border-top-width: 2px;
+        border-top-color: #e0e0e0;
+      }
+
+      .mat-step-header {
+        padding: 24px 8px;
+
+        .mat-step-icon {
+          background-color: #e0e0e0;
+          color: #666;
+
+          &.mat-step-icon-selected {
+            background-color: #1976d2;
+            color: white;
+          }
+
+          &.mat-step-icon-state-done {
+            background-color: #4caf50;
+            color: white;
+          }
+        }
+
+        .mat-step-label {
+          font-weight: 500;
+          
+          &.mat-step-label-active {
+            color: #1976d2;
+          }
+        }
+      }
+    }
+
+    .step-content {
+      padding: 32px;
+
+      @media (max-width: 768px) {
+        padding: 24px;
+      }
+
+      .step-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 32px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f0f0f0;
+
+        .step-icon {
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+          color: #1976d2;
+          flex-shrink: 0;
+          margin-top: 4px;
+        }
+
+        h3 {
+          margin: 0 0 4px 0;
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #333;
+        }
+
+        p {
+          margin: 0;
+          color: #666;
+          font-size: 0.95rem;
+        }
+      }
+
+      .form-section {
+        margin-bottom: 32px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        .section-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: 0 0 8px 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #333;
+
+          mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            color: #1976d2;
+          }
+        }
+
+        .section-description {
+          margin: 0 0 24px 0;
+          color: #666;
+          font-size: 0.9rem;
+          line-height: 1.5;
+        }
+
+        .full-width {
+          width: 100%;
+          margin-bottom: 20px;
+        }
+
+        mat-divider {
+          margin: 32px 0;
+        }
+      }
+
+      // Data Type Options
+      .data-type-options {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+
+        .data-type-option {
+          border: 2px solid #e0e0e0;
+          border-radius: 12px;
+          padding: 20px;
+          transition: all 0.3s ease;
+          cursor: pointer;
+
+          &:hover {
+            border-color: #1976d2;
+            box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+          }
+
+          &.selected {
+            border-color: #1976d2;
+            background-color: rgba(25, 118, 210, 0.04);
+            box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+          }
+
+          .mat-radio-button {
+            width: 100%;
+
+            .mat-radio-container {
+              margin-right: 16px;
+            }
+
+            .mat-radio-label-content {
+              width: 100%;
+            }
+          }
+
+          .option-content {
+            .option-header {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 8px;
+
+              mat-icon {
+                font-size: 24px;
+                width: 24px;
+                height: 24px;
+
+                &.image { color: #1976d2; }
+                &.text { color: #7b1fa2; }
+                &.structured { color: #388e3c; }
+              }
+
+              .option-label {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #333;
+              }
+            }
+
+            .option-description {
+              margin: 0 0 12px 0;
+              color: #666;
+              font-size: 0.9rem;
+              line-height: 1.4;
+            }
+
+            .option-examples {
+              font-size: 0.85rem;
+              color: #888;
+
+              .examples-label {
+                font-weight: 500;
+                color: #666;
+              }
+
+              .examples-list {
+                font-style: italic;
+              }
+            }
+          }
+        }
+      }
+
+      // Visibility Options
+      .visibility-options {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .visibility-option {
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          padding: 16px;
+          transition: all 0.3s ease;
+          cursor: pointer;
+
+          &:hover {
+            border-color: #1976d2;
+            box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+          }
+
+          &.selected {
+            border-color: #1976d2;
+            background-color: rgba(25, 118, 210, 0.04);
+          }
+
+          &.recommended {
+            border-color: #4caf50;
+            
+            &.selected {
+              border-color: #4caf50;
+              background-color: rgba(76, 175, 80, 0.04);
+            }
+          }
+
+          .mat-radio-button {
+            width: 100%;
+
+            .mat-radio-container {
+              margin-right: 12px;
+            }
+
+            .mat-radio-label-content {
+              width: 100%;
+            }
+          }
+
+          .option-content {
+            .option-header {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-bottom: 4px;
+
+              mat-icon {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+                color: #666;
+              }
+
+              .option-label {
+                font-weight: 600;
+                color: #333;
+                flex: 1;
+              }
+
+              .recommended-badge {
+                background: #4caf50;
+                color: white;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: 500;
+              }
+            }
+
+            .option-description {
+              margin: 0;
+              color: #666;
+              font-size: 0.9rem;
+            }
+          }
+        }
+      }
+
+      // Tags Section
+      .selected-tags {
+        margin-bottom: 16px;
+
+        mat-chip-set {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        mat-chip {
+          background-color: #e3f2fd;
+          color: #1976d2;
+          font-weight: 500;
+
+          mat-icon {
+            color: #1976d2;
+          }
+        }
+      }
+
+      .available-tags {
+        h5 {
+          margin: 0 0 12px 0;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .tag-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+
+          .tag-button {
+            font-size: 0.85rem;
+            min-height: 32px;
+            border-radius: 16px;
+            transition: all 0.2s ease;
+
+            &:not([disabled]):hover {
+              background-color: #e3f2fd;
+              border-color: #1976d2;
+              color: #1976d2;
+            }
+
+            &.selected,
+            &[disabled] {
+              background-color: #e0e0e0;
+              color: #999;
+              cursor: default;
+            }
+          }
+        }
+      }
+
+      // Checkbox Group
+      .checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+
+        mat-checkbox {
+          .mat-checkbox-layout {
+            align-items: flex-start;
+          }
+
+          .mat-checkbox-inner-container {
+            margin-top: 2px;
+          }
+
+          .checkbox-content {
+            margin-left: 8px;
+
+            .checkbox-label {
+              font-weight: 500;
+              color: #333;
+              display: block;
+              margin-bottom: 4px;
+            }
+
+            .checkbox-description {
+              font-size: 0.85rem;
+              color: #666;
+              margin: 0;
+              line-height: 1.4;
+            }
+          }
+        }
+      }
+
+      // Dataset Summary
+      .dataset-summary {
+        .summary-card {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 20px;
+          border-left: 4px solid #1976d2;
+
+          .summary-item {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+
+            strong {
+              color: #333;
+              font-weight: 600;
+              display: inline-block;
+              min-width: 120px;
+            }
+          }
+        }
+      }
+
+      // Step Actions
+      .step-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid #f0f0f0;
+
+        &.final-actions {
+          justify-content: space-between;
+
+          @media (max-width: 768px) {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+          }
+        }
+
+        button {
+          min-width: 100px;
+          height: 44px;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+
+          mat-spinner {
+            margin-right: 8px;
+          }
+
+          @media (max-width: 768px) {
+            min-width: unset;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark theme support
+.dark-theme {
+  .dataset-create-container {
+    .page-header {
+      .header-text {
+        .page-title {
+          color: #90caf9;
+        }
+
+        .page-subtitle {
+          color: #ccc;
+        }
+      }
+
+      .back-button {
+        color: #ccc;
+
+        &:hover {
+          color: #90caf9;
+          background-color: rgba(144, 202, 249, 0.04);
+        }
+      }
+    }
+
+    .create-form-card {
+      background: #424242;
+
+      .mat-stepper-horizontal {
+        .mat-horizontal-stepper-header-container {
+          background: #616161;
+          border-bottom-color: #666;
+        }
+
+        .mat-stepper-horizontal-line {
+          border-top-color: #666;
+        }
+      }
+
+      .step-content {
+        .step-header {
+          border-bottom-color: #666;
+
+          .step-icon {
+            color: #90caf9;
+          }
+
+          h3 {
+            color: #fff;
+          }
+
+          p {
+            color: #ccc;
+          }
+        }
+
+        .form-section {
+          .section-title {
+            color: #fff;
+
+            mat-icon {
+              color: #90caf9;
+            }
+          }
+
+          .section-description {
+            color: #ccc;
+          }
+        }
+
+        .data-type-option,
+        .visibility-option {
+          border-color: #666;
+          background: #424242;
+
+          &:hover {
+            border-color: #90caf9;
+          }
+
+          &.selected {
+            border-color: #90caf9;
+            background-color: rgba(144, 202, 249, 0.04);
+          }
+
+          .option-content {
+            .option-header .option-label,
+            .option-description {
+              color: #fff;
+            }
+
+            .option-description {
+              color: #ccc;
+            }
+          }
+        }
+
+        .checkbox-group {
+          mat-checkbox {
+            .checkbox-content {
+              .checkbox-label {
+                color: #fff;
+              }
+
+              .checkbox-description {
+                color: #ccc;
+              }
+            }
+          }
+        }
+
+        .dataset-summary {
+          .summary-card {
+            background: #616161;
+            border-left-color: #90caf9;
+
+            .summary-item {
+              strong {
+                color: #fff;
+              }
+            }
+          }
+        }
+
+        .step-actions {
+          border-top-color: #666;
+        }
+      }
+    }
+  }
+}
+
+// Loading states and animations
+.dataset-create-container {
+  .step-content {
+    animation: fadeIn 0.3s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Form validation states
+.mat-form-field.mat-form-field-invalid {
+  .mat-form-field-prefix mat-icon {
+    color: #f44336;
+  }
+}
+
+// Success states
+.mat-form-field.ng-valid.ng-touched {
+  .mat-form-field-prefix mat-icon {
+    color: #4caf50;
+  }
+}
+
+// Responsive improvements
+@media (max-width: 480px) {
+  .dataset-create-container {
+    .create-form-card {
+      .step-content {
+        padding: 16px;
+
+        .data-type-options,
+        .visibility-options {
+          .data-type-option,
+          .visibility-option {
+            padding: 16px;
+          }
+        }
+
+        .available-tags .tag-buttons {
+          .tag-button {
+            font-size: 0.8rem;
+            min-height: 28px;
+          }
+        }
+      }
+    }
+  }
+}

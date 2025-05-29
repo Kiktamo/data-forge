@@ -30,7 +30,7 @@ export class DatasetService {
     Object.keys(params).forEach(key => {
       const value = params[key as keyof DatasetQueryParams];
       if (value !== undefined && value !== null) {
-        // Skip empty strings for string values
+        // Skip empty strings for string values, but allow 0 for numbers
         if (typeof value === 'string' && value === '') {
           return;
         }

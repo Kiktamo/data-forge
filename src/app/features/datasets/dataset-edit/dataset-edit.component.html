@@ -1,1 +1,326 @@
-<p>dataset-edit works!</p>
+<div class="dataset-edit-container">
+  <!-- Loading spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading dataset...</p>
+  </div>
+
+  <!-- Edit form -->
+  <div *ngIf="!isLoading && dataset" class="edit-content">
+    
+    <!-- Header Section -->
+    <div class="edit-header">
+      <div class="header-content">
+        <button 
+          mat-icon-button 
+          [routerLink]="['/datasets', datasetId]" 
+          class="back-button"
+          matTooltip="Back to dataset"
+        >
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        
+        <div class="header-text">
+          <div class="dataset-info">
+            <div class="dataset-type-badge" [ngClass]="dataset.dataType">
+              <mat-icon>{{ getDataTypeIcon() }}</mat-icon>
+              <span>{{ getDataTypeLabel() }}</span>
+            </div>
+            <h1 class="page-title">Edit Dataset</h1>
+            <p class="page-subtitle">Update your dataset information and settings</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Form Card -->
+    <mat-card class="edit-form-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>edit</mat-icon>
+          Dataset Settings
+        </mat-card-title>
+        <mat-card-subtitle>
+          Modify your dataset information. Note: Data type cannot be changed after creation.
+        </mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <form [formGroup]="editForm" (ngSubmit)="onSubmit()" class="edit-form">
+          
+          <!-- Basic Information Section -->
+          <div class="form-section">
+            <h3 class="section-title">
+              <mat-icon>info</mat-icon>
+              Basic Information
+            </h3>
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Dataset Name *</mat-label>
+              <input 
+                matInput 
+                formControlName="name"
+                placeholder="Enter a descriptive name for your dataset"
+                maxlength="100"
+              >
+              <mat-icon matPrefix>dataset</mat-icon>
+              <mat-hint align="end">{{ name?.value?.length || 0 }}/100</mat-hint>
+              <mat-error>{{ getFieldError('name') }}</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Description</mat-label>
+              <textarea 
+                matInput 
+                formControlName="description"
+                placeholder="Describe what this dataset contains and its purpose"
+                rows="4"
+                maxlength="2000"
+              ></textarea>
+              <mat-icon matPrefix>description</mat-icon>
+              <mat-hint align="end">{{ description?.value?.length || 0 }}/2000</mat-hint>
+              <mat-error>{{ getFieldError('description') }}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- Data Type Section (Read-only) -->
+          <div class="form-section">
+            <h3 class="section-title">
+              <mat-icon>category</mat-icon>
+              Data Type
+            </h3>
+            <p class="section-description">Data type cannot be changed after dataset creation.</p>
+            
+            <div class="data-type-display">
+              <div class="data-type-card" [ngClass]="dataset.dataType">
+                <mat-icon>{{ getDataTypeIcon() }}</mat-icon>
+                <div class="type-info">
+                  <span class="type-label">{{ getDataTypeLabel() }}</span>
+                  <span class="type-description">Current data type</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- Visibility Settings -->
+          <div class="form-section">
+            <h3 class="section-title">
+              <mat-icon>visibility</mat-icon>
+              Access Level *
+            </h3>
+            <p class="section-description">Control who can view and contribute to this dataset</p>
+            
+            <mat-radio-group formControlName="visibility" class="visibility-options">
+              <div 
+                class="visibility-option" 
+                *ngFor="let option of visibilityOptions"
+                [class.selected]="visibility?.value === option.value"
+                [class.recommended]="option.recommended"
+              >
+                <mat-radio-button [value]="option.value">
+                  <div class="option-content">
+                    <div class="option-header">
+                      <mat-icon>{{ option.icon }}</mat-icon>
+                      <span class="option-label">{{ option.label }}</span>
+                      <span class="recommended-badge" *ngIf="option.recommended">Recommended</span>
+                    </div>
+                    <p class="option-description">{{ option.description }}</p>
+                  </div>
+                </mat-radio-button>
+              </div>
+            </mat-radio-group>
+            <mat-error *ngIf="visibility?.errors?.['required'] && visibility?.touched">
+              Please select an access level
+            </mat-error>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- Tags Section -->
+          <div class="form-section">
+            <h3 class="section-title">
+              <mat-icon>local_offer</mat-icon>
+              Tags
+            </h3>
+            <p class="section-description">Add tags to help others discover your dataset</p>
+            
+            <!-- Selected Tags -->
+            <div class="selected-tags" *ngIf="tagsArray.length > 0">
+              <h4>Selected Tags:</h4>
+              <mat-chip-set>
+                <mat-chip 
+                  *ngFor="let tag of tagsArray.controls; let i = index"
+                  (removed)="removeTag(i)"
+                  [removable]="true"
+                >
+                  {{ tag.value }}
+                  <mat-icon matChipRemove>cancel</mat-icon>
+                </mat-chip>
+              </mat-chip-set>
+            </div>
+            
+            <!-- Available Tags -->
+            <div class="available-tags">
+              <h4>Popular Tags:</h4>
+              <div class="tag-buttons">
+                <button
+                  *ngFor="let tag of availableTags"
+                  mat-stroked-button
+                  type="button"
+                  class="tag-button"
+                  [class.selected]="isTagSelected(tag)"
+                  [disabled]="isTagSelected(tag)"
+                  (click)="addTag(tag)"
+                >
+                  {{ tag }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- Current Settings Summary -->
+          <div class="form-section settings-summary">
+            <h3 class="section-title">
+              <mat-icon>preview</mat-icon>
+              Current Settings
+            </h3>
+            
+            <div class="summary-grid">
+              <div class="summary-item">
+                <label>Dataset Name:</label>
+                <span>{{ name?.value || 'Not specified' }}</span>
+              </div>
+              <div class="summary-item" *ngIf="description?.value">
+                <label>Description:</label>
+                <span>{{ description?.value }}</span>
+              </div>
+              <div class="summary-item">
+                <label>Data Type:</label>
+                <span>{{ getDataTypeLabel() }}</span>
+              </div>
+              <div class="summary-item">
+                <label>Access Level:</label>
+                <span>{{ getSelectedVisibilityInfo()?.label || 'Not selected' }}</span>
+              </div>
+              <div class="summary-item" *ngIf="tagsArray.length > 0">
+                <label>Tags:</label>
+                <span>{{ tagsArray.value.join(', ') }}</span>
+              </div>
+              <div class="summary-item">
+                <label>Version:</label>
+                <span>{{ dataset.currentVersion }}</span>
+              </div>
+              <div class="summary-item">
+                <label>Created:</label>
+                <span>{{ dataset.createdAt | date:'medium' }}</span>
+              </div>
+              <div class="summary-item">
+                <label>Last Updated:</label>
+                <span>{{ dataset.updatedAt | date:'medium' }}</span>
+              </div>
+            </div>
+          </div>
+          
+        </form>
+      </mat-card-content>
+      
+      <!-- Action Buttons -->
+      <mat-card-actions class="form-actions">
+        <div class="action-group">
+          <button 
+            mat-button 
+            type="button" 
+            (click)="onCancel()"
+            [disabled]="isSubmitting"
+          >
+            <mat-icon>close</mat-icon>
+            Cancel
+          </button>
+          
+          <button 
+            mat-button 
+            type="button" 
+            (click)="resetForm()"
+            [disabled]="isSubmitting || !hasChanges()"
+            matTooltip="Reset to original values"
+          >
+            <mat-icon>refresh</mat-icon>
+            Reset
+          </button>
+        </div>
+        
+        <div class="primary-actions">
+          <div class="changes-indicator" *ngIf="hasChanges()">
+            <mat-icon>edit</mat-icon>
+            <span>Unsaved changes</span>
+          </div>
+          
+          <button 
+            mat-raised-button 
+            color="primary" 
+            type="submit"
+            (click)="onSubmit()"
+            [disabled]="editForm.invalid || isSubmitting || !hasChanges()"
+          >
+            <mat-spinner diameter="20" *ngIf="isSubmitting"></mat-spinner>
+            <mat-icon *ngIf="!isSubmitting">save</mat-icon>
+            <span *ngIf="!isSubmitting">Save Changes</span>
+            <span *ngIf="isSubmitting">Saving...</span>
+          </button>
+        </div>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Dataset Information Card -->
+    <mat-card class="info-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>info</mat-icon>
+          Dataset Information
+        </mat-card-title>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <div class="info-grid">
+          <div class="info-item">
+            <mat-icon>list</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Total Contributions</span>
+              <span class="info-value">{{ dataset.contributionCount | number }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>verified</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Validated</span>
+              <span class="info-value">{{ dataset.validationCount | number }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>schedule</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Created</span>
+              <span class="info-value">{{ dataset.createdAt | date:'short' }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>update</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Last Modified</span>
+              <span class="info-value">{{ dataset.updatedAt | date:'short' }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

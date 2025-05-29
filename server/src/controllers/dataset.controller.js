@@ -21,12 +21,20 @@ exports.getDatasets = async (req, res) => {
     // Build where clause
     const whereClause = { isActive: true };
     
-    // Visibility filter
+    // Visibility filter - more sophisticated logic
     if (visibility) {
+      // Specific visibility requested
       whereClause.visibility = visibility;
     } else {
-      // Default: show only public datasets unless user is authenticated and requesting their own
-      if (!userId || userId !== req.user?.id?.toString()) {
+      // No specific visibility filter - show appropriate datasets based on user status
+      if (userId) {
+        // User-specific datasets - show all their own datasets regardless of visibility
+        whereClause.ownerId = userId;
+      } else if (req.user) {
+        // Authenticated user viewing "all" datasets - show public and collaborative
+        whereClause.visibility = { [Op.in]: ['public', 'collaborative'] };
+      } else {
+        // Unauthenticated user - only public datasets
         whereClause.visibility = 'public';
       }
     }
@@ -39,6 +47,8 @@ exports.getDatasets = async (req, res) => {
     // User filter (for "my datasets")
     if (userId) {
       whereClause.ownerId = userId;
+      // Remove visibility restrictions for user's own datasets
+      delete whereClause.visibility;
     }
 
     // Search filter
@@ -372,35 +382,173 @@ exports.getDatasetHistory = async (req, res) => {
       });
     }
 
-    // Get history from temporal table
+    // Calculate offset
     const offset = (page - 1) * limit;
     
-    const { count, rows: history } = await Dataset.HistoryModel.findAndCountAll({
-      where: { id },
-      include: [{
-        model: User,
-        as: 'owner',
-        attributes: ['id', 'username', 'fullName']
-      }],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['updatedAt', sortOrder.toUpperCase()]],
-      distinct: true
-    });
+    // Access the history table using multiple fallback approaches
+    let DatasetHistory = null;
+    
+    // Try different ways to access the history model
+    try {
+      // Method 1: From models export
+      const models = require('../models');
+      DatasetHistory = models.DatasetHistory;
+    } catch (error) {
+      console.log('Method 1 failed');
+    }
+    
+    if (!DatasetHistory) {
+      try {
+        // Method 2: Direct from sequelize models
+        DatasetHistory = Dataset.sequelize.models.DatasetHistory;
+      } catch (error) {
+        console.log('Method 2 failed');
+      }
+    }
+    
+    if (!DatasetHistory) {
+      try {
+        // Method 3: Sequelize-temporal naming convention
+        DatasetHistory = Dataset.sequelize.models['Dataset' + 'History'];
+      } catch (error) {
+        console.log('Method 3 failed');
+      }
+    }
+    
+    if (!DatasetHistory) {
+      try {
+        // Method 4: Check for plural form
+        DatasetHistory = Dataset.sequelize.models.DatasetHistories;
+      } catch (error) {
+        console.log('Method 4 failed');
+      }
+    }
+
+    if (!DatasetHistory) {
+      // Debug: List all available models
+      console.log('Available Sequelize models:', Object.keys(Dataset.sequelize.models));
+      
+      // If history model doesn't exist, return empty history
+      return res.json({
+        success: true,
+        data: {
+          history: [],
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: parseInt(limit),
+            hasNext: false,
+            hasPrev: false
+          }
+        }
+      });
+    }
+
+    // Get history records for this dataset ID
+    let count = 0;
+    let history = [];
+    
+    try {
+      const result = await DatasetHistory.findAndCountAll({
+        where: { id: parseInt(id) }, // Filter by original dataset ID
+        include: [{
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'username', 'fullName'],
+          required: false // LEFT JOIN in case user is deleted
+        }],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['archivedAt', sortOrder.toUpperCase()]], // Use archivedAt for ordering
+        distinct: true
+      });
+      
+      count = result.count;
+      history = result.rows;
+    } catch (associationError) {
+      console.log('Association failed, trying without User include:', associationError.message);
+      
+      // Fallback: try without the User association
+      try {
+        const result = await DatasetHistory.findAndCountAll({
+          where: { id: parseInt(id) },
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          order: [['archivedAt', sortOrder.toUpperCase()]],
+          distinct: true
+        });
+        
+        count = result.count;
+        history = result.rows;
+      } catch (fallbackError) {
+        console.log('Fallback also failed, using raw SQL approach');
+        
+        // Last resort: raw SQL query
+        const historyQuery = `
+          SELECT * FROM "DatasetHistories" 
+          WHERE id = :datasetId 
+          ORDER BY "archivedAt" ${sortOrder.toUpperCase()}
+          LIMIT :limit OFFSET :offset
+        `;
+        
+        const countQuery = `
+          SELECT COUNT(*) as count FROM "DatasetHistories" 
+          WHERE id = :datasetId
+        `;
+        
+        const [historyResults] = await Dataset.sequelize.query(historyQuery, {
+          replacements: { 
+            datasetId: parseInt(id), 
+            limit: parseInt(limit), 
+            offset: parseInt(offset) 
+          }
+        });
+        
+        const [countResults] = await Dataset.sequelize.query(countQuery, {
+          replacements: { datasetId: parseInt(id) }
+        });
+        
+        history = historyResults;
+        count = parseInt(countResults[0]?.count || 0);
+      }
+    }
 
     // Calculate pagination info
     const totalPages = Math.ceil(count / limit);
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
+    // Transform history records to match expected format
+    const transformedHistory = history.map(record => {
+      // Handle both Sequelize model instances and raw SQL results
+      const data = record.dataValues || record;
+      
+      return {
+        id: data.hid || data.id,
+        version: data.archivedAt || data.archived_at,
+        isHistorical: true,
+        name: data.name,
+        description: data.description,
+        ownerId: data.ownerId || data.owner_id,
+        visibility: data.visibility,
+        dataType: data.dataType || data.data_type,
+        currentVersion: data.currentVersion || data.current_version,
+        tags: data.tags || [],
+        contributionCount: data.contributionCount || data.contribution_count || 0,
+        validationCount: data.validationCount || data.validation_count || 0,
+        isActive: data.isActive !== undefined ? data.isActive : (data.is_active !== undefined ? data.is_active : true),
+        createdAt: data.createdAt || data.created_at,
+        updatedAt: data.updatedAt || data.updated_at,
+        archivedAt: data.archivedAt || data.archived_at,
+        owner: record.owner || null
+      };
+    });
+
     res.json({
       success: true,
       data: {
-        history: history.map(version => ({
-          ...version.toSafeObject(),
-          version: version.updatedAt, // Use timestamp as version identifier
-          isHistorical: true
-        })),
+        history: transformedHistory,
         pagination: {
           currentPage: parseInt(page),
           totalPages,

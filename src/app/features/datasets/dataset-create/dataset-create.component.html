@@ -1,1 +1,314 @@
-<p>dataset-create works!</p>
+<div class="dataset-create-container">
+  <div class="page-header">
+    <div class="header-content">
+      <button 
+        mat-icon-button 
+        (click)="onCancel()" 
+        class="back-button"
+        matTooltip="Back to datasets"
+      >
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="header-text">
+        <h1 class="page-title">Create New Dataset</h1>
+        <p class="page-subtitle">Set up a collaborative dataset for machine learning</p>
+      </div>
+    </div>
+  </div>
+
+  <mat-card class="create-form-card">
+    <form [formGroup]="createForm" (ngSubmit)="onSubmit()">
+      <mat-stepper [linear]="isLinear" #stepper>
+        
+        <!-- Step 1: Basic Information -->
+        <mat-step [stepControl]="basicInfo" [completed]="isBasicInfoComplete()">
+          <ng-template matStepLabel>Basic Information</ng-template>
+          
+          <div class="step-content" formGroupName="basicInfo">
+            <div class="step-header">
+              <mat-icon class="step-icon">info</mat-icon>
+              <div>
+                <h3>Dataset Information</h3>
+                <p>Provide basic details about your dataset</p>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Dataset Name *</mat-label>
+                <input 
+                  matInput 
+                  formControlName="name"
+                  placeholder="Enter a descriptive name for your dataset"
+                  maxlength="100"
+                >
+                <mat-icon matPrefix>dataset</mat-icon>
+                <mat-hint align="end">{{ name?.value?.length || 0 }}/100</mat-hint>
+                <mat-error>{{ getFieldError('basicInfo.name') }}</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Description</mat-label>
+                <textarea 
+                  matInput 
+                  formControlName="description"
+                  placeholder="Describe what this dataset contains, its purpose, and how it will be used"
+                  rows="4"
+                  maxlength="2000"
+                ></textarea>
+                <mat-icon matPrefix>description</mat-icon>
+                <mat-hint align="end">{{ description?.value?.length || 0 }}/2000</mat-hint>
+                <mat-error>{{ getFieldError('basicInfo.description') }}</mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="step-actions">
+              <button mat-raised-button color="primary" matStepperNext type="button">
+                Next
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-step>
+
+        <!-- Step 2: Dataset Configuration -->
+        <mat-step [stepControl]="configuration" [completed]="isConfigurationComplete()">
+          <ng-template matStepLabel>Configuration</ng-template>
+          
+          <div class="step-content" formGroupName="configuration">
+            <div class="step-header">
+              <mat-icon class="step-icon">settings</mat-icon>
+              <div>
+                <h3>Dataset Configuration</h3>
+                <p>Choose the data type and access settings</p>
+              </div>
+            </div>
+
+            <!-- Data Type Selection -->
+            <div class="form-section">
+              <h4 class="section-title">
+                <mat-icon>category</mat-icon>
+                Data Type *
+              </h4>
+              <p class="section-description">What type of data will this dataset contain?</p>
+              
+              <mat-radio-group formControlName="dataType" class="data-type-options">
+                <div 
+                  class="data-type-option" 
+                  *ngFor="let option of dataTypeOptions"
+                  [class.selected]="dataType?.value === option.value"
+                >
+                  <mat-radio-button [value]="option.value">
+                    <div class="option-content">
+                      <div class="option-header">
+                        <mat-icon [class]="option.value">{{ option.icon }}</mat-icon>
+                        <span class="option-label">{{ option.label }}</span>
+                      </div>
+                      <p class="option-description">{{ option.description }}</p>
+                      <div class="option-examples">
+                        <span class="examples-label">Examples:</span>
+                        <span class="examples-list">{{ option.examples.join(', ') }}</span>
+                      </div>
+                    </div>
+                  </mat-radio-button>
+                </div>
+              </mat-radio-group>
+              <mat-error *ngIf="dataType?.errors?.['required'] && dataType?.touched">
+                Please select a data type
+              </mat-error>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Visibility Settings -->
+            <div class="form-section">
+              <h4 class="section-title">
+                <mat-icon>visibility</mat-icon>
+                Access Level *
+              </h4>
+              <p class="section-description">Who can view and contribute to this dataset?</p>
+              
+              <mat-radio-group formControlName="visibility" class="visibility-options">
+                <div 
+                  class="visibility-option" 
+                  *ngFor="let option of visibilityOptions"
+                  [class.selected]="visibility?.value === option.value"
+                  [class.recommended]="option.recommended"
+                >
+                  <mat-radio-button [value]="option.value">
+                    <div class="option-content">
+                      <div class="option-header">
+                        <mat-icon>{{ option.icon }}</mat-icon>
+                        <span class="option-label">{{ option.label }}</span>
+                        <span class="recommended-badge" *ngIf="option.recommended">Recommended</span>
+                      </div>
+                      <p class="option-description">{{ option.description }}</p>
+                    </div>
+                  </mat-radio-button>
+                </div>
+              </mat-radio-group>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Tags Section -->
+            <div class="form-section">
+              <h4 class="section-title">
+                <mat-icon>local_offer</mat-icon>
+                Tags
+              </h4>
+              <p class="section-description">Add tags to help others discover your dataset</p>
+              
+              <!-- Selected Tags -->
+              <div class="selected-tags" *ngIf="tagsArray.length > 0">
+                <mat-chip-set>
+                  <mat-chip 
+                    *ngFor="let tag of tagsArray.controls; let i = index"
+                    (removed)="removeTag(i)"
+                    [removable]="true"
+                  >
+                    {{ tag.value }}
+                    <mat-icon matChipRemove>cancel</mat-icon>
+                  </mat-chip>
+                </mat-chip-set>
+              </div>
+              
+              <!-- Available Tags -->
+              <div class="available-tags">
+                <h5>Popular Tags:</h5>
+                <div class="tag-buttons">
+                  <button
+                    *ngFor="let tag of availableTags"
+                    mat-stroked-button
+                    type="button"
+                    class="tag-button"
+                    [class.selected]="isTagSelected(tag)"
+                    [disabled]="isTagSelected(tag)"
+                    (click)="addTag(tag)"
+                  >
+                    {{ tag }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button mat-button matStepperPrevious type="button">
+                <mat-icon>arrow_back</mat-icon>
+                Back
+              </button>
+              <button mat-raised-button color="primary" matStepperNext type="button">
+                Next
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-step>
+
+        <!-- Step 3: Advanced Settings -->
+        <mat-step [stepControl]="settings" [completed]="isSettingsComplete()">
+          <ng-template matStepLabel>Settings</ng-template>
+          
+          <div class="step-content" formGroupName="settings">
+            <div class="step-header">
+              <mat-icon class="step-icon">tune</mat-icon>
+              <div>
+                <h3>Advanced Settings</h3>
+                <p>Configure collaboration and validation preferences</p>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4 class="section-title">
+                <mat-icon>people</mat-icon>
+                Collaboration Settings
+              </h4>
+              
+              <div class="checkbox-group">
+                <mat-checkbox formControlName="allowPublicContributions">
+                  <div class="checkbox-content">
+                    <span class="checkbox-label">Allow Public Contributions</span>
+                    <p class="checkbox-description">
+                      Let anyone submit contributions to this dataset (subject to validation)
+                    </p>
+                  </div>
+                </mat-checkbox>
+
+                <mat-checkbox formControlName="requireValidation">
+                  <div class="checkbox-content">
+                    <span class="checkbox-label">Require Validation</span>
+                    <p class="checkbox-description">
+                      All contributions must be validated before being included
+                    </p>
+                  </div>
+                </mat-checkbox>
+
+                <mat-checkbox formControlName="autoPublish">
+                  <div class="checkbox-content">
+                    <span class="checkbox-label">Auto-publish Validated Data</span>
+                    <p class="checkbox-description">
+                      Automatically make validated contributions available for download
+                    </p>
+                  </div>
+                </mat-checkbox>
+              </div>
+            </div>
+
+            <!-- Dataset Summary -->
+            <div class="form-section dataset-summary">
+              <h4 class="section-title">
+                <mat-icon>preview</mat-icon>
+                Dataset Summary
+              </h4>
+              
+              <div class="summary-card">
+                <div class="summary-item">
+                  <strong>Name:</strong> {{ name?.value || 'Not specified' }}
+                </div>
+                <div class="summary-item" *ngIf="description?.value">
+                  <strong>Description:</strong> {{ description?.value }}
+                </div>
+                <div class="summary-item">
+                  <strong>Data Type:</strong> {{ getSelectedDataTypeInfo()?.label || 'Not selected' }}
+                </div>
+                <div class="summary-item">
+                  <strong>Access Level:</strong> {{ getSelectedVisibilityInfo()?.label || 'Not selected' }}
+                </div>
+                <div class="summary-item" *ngIf="tagsArray.length > 0">
+                  <strong>Tags:</strong> {{ tagsArray.value.join(', ') }}
+                </div>
+              </div>
+            </div>
+
+            <div class="step-actions final-actions">
+              <button mat-button matStepperPrevious type="button">
+                <mat-icon>arrow_back</mat-icon>
+                Back
+              </button>
+              <button 
+                mat-button 
+                type="button" 
+                (click)="saveDraft()"
+                [disabled]="isSubmitting"
+              >
+                <mat-icon>save</mat-icon>
+                Save Draft
+              </button>
+              <button 
+                mat-raised-button 
+                color="primary" 
+                type="submit"
+                [disabled]="createForm.invalid || isSubmitting"
+              >
+                <mat-spinner diameter="20" *ngIf="isSubmitting"></mat-spinner>
+                <mat-icon *ngIf="!isSubmitting">publish</mat-icon>
+                <span *ngIf="!isSubmitting">Create Dataset</span>
+                <span *ngIf="isSubmitting">Creating...</span>
+              </button>
+            </div>
+          </div>
+        </mat-step>
+      </mat-stepper>
+    </form>
+  </mat-card>
+</div>

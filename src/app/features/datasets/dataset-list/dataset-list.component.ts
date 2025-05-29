@@ -15,7 +15,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar'
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 
 import { Dataset, DatasetQueryParams } from '../../../core/models/dataset.model';
 import { DatasetService } from '../../../core/services/dataset.service';
@@ -136,8 +136,8 @@ export class DatasetListComponent implements OnInit, OnDestroy {
       page: this.currentPage,
       limit: this.pageSize,
       search: this.searchQuery || undefined,
-      dataType: this.selectedDataType || undefined,
-      visibility: this.selectedVisibility || undefined,
+      dataType: (this.selectedDataType as any) || undefined,
+      visibility: (this.selectedVisibility as any) || undefined,
       sortBy: sortBy as any,
       sortOrder: sortOrder
     };
