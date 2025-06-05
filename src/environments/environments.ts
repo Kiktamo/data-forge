@@ -1,7 +1,5 @@
-
 export const environment = {
-    production: false,
-    apiUrl: 'http://localhost:3000/api',
-    appName: 'DataForge',
-    version: '0.1.0'
-  };
+  production: false,
+  apiUrl: 'http://localhost:3000/api',
+  wsUrl: 'ws://localhost:3000'
+};

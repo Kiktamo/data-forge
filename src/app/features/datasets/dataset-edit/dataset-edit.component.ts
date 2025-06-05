@@ -22,6 +22,8 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { Dataset, UpdateDatasetRequest } from '../../../core/models/dataset.model';
 import { DatasetService } from '../../../core/services/dataset.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { WebSocketService } from '../../../core/services/web-socket.service';
+import { PresenceIndicatorComponent } from '../../../core/components/presence-indicator/presence-indicator.component';
 
 @Component({
   selector: 'app-dataset-edit',
@@ -43,14 +45,15 @@ import { AuthService } from '../../../core/services/auth.service';
     MatCheckboxModule,
     MatDividerModule,
     MatTooltipModule,
-    MatDialogModule
+    MatDialogModule,
+    PresenceIndicatorComponent
   ],
   templateUrl: './dataset-edit.component.html',
   styleUrls: ['./dataset-edit.component.scss']
 })
 export class DatasetEditComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-  public datasetId!: number;
+  protected datasetId!: number;
   
   // Data properties
   dataset: Dataset | null = null;
@@ -100,7 +103,8 @@ export class DatasetEditComponent implements OnInit, OnDestroy {
     private datasetService: DatasetService,
     private authService: AuthService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private wsService: WebSocketService
   ) {
     this.editForm = this.fb.group({
       name: ['', [
@@ -130,6 +134,10 @@ export class DatasetEditComponent implements OnInit, OnDestroy {
   }
   
   ngOnDestroy(): void {
+    // Stop editing and leave dataset
+    this.wsService.stopEditing();
+    this.wsService.leaveDataset();
+    
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -151,6 +159,11 @@ export class DatasetEditComponent implements OnInit, OnDestroy {
         this.dataset = dataset;
         this.checkPermissions();
         this.populateForm();
+        
+        // Join dataset and start editing session
+        this.wsService.joinDataset(dataset.id);
+        this.wsService.startEditing(dataset.id);
+        
         this.isLoading = false;
       },
       error: (error) => {

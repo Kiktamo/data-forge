@@ -20,6 +20,8 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { Dataset } from '../../../core/models/dataset.model';
 import { DatasetService } from '../../../core/services/dataset.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { WebSocketService } from '../../../core/services/web-socket.service';
+import { PresenceIndicatorComponent } from '../../../core/components/presence-indicator/presence-indicator.component';
 
 interface DatasetStats {
   totalContributions: number;
@@ -62,7 +64,8 @@ interface DatasetHistoryItem {
     MatDividerModule,
     MatDialogModule,
     MatProgressBarModule,
-    MatBadgeModule
+    MatBadgeModule,
+    PresenceIndicatorComponent
   ],
   templateUrl: './dataset-detail.component.html',
   styleUrls: ['./dataset-detail.component.scss']
@@ -94,7 +97,8 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
     private datasetService: DatasetService,
     public authService: AuthService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private wsService: WebSocketService
   ) {}
   
   ngOnInit(): void {
@@ -110,6 +114,9 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
   }
   
   ngOnDestroy(): void {
+    // Leave dataset before destroying component
+    this.wsService.leaveDataset();
+    
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -124,6 +131,10 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
       next: (dataset) => {
         this.dataset = dataset;
         this.isLoading = false;
+        
+        // Join dataset room for real-time updates
+        this.wsService.joinDataset(dataset.id);
+        
         // Load additional data
         this.loadStats();
       },
