@@ -1,1 +1,390 @@
-<p>contribution-create works!</p>
+<div class="contribution-create-container">
+      <!-- Loading spinner -->
+      <div class="loading-container" *ngIf="isLoadingDataset">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading dataset information...</p>
+      </div>
+
+      <!-- Main content -->
+      <div *ngIf="!isLoadingDataset && dataset" class="create-content">
+        
+        <!-- Header Section -->
+        <div class="create-header">
+          <div class="header-content">
+            <button 
+              mat-icon-button 
+              [routerLink]="['/datasets', datasetId]" 
+              class="back-button"
+              matTooltip="Back to dataset"
+            >
+              <mat-icon>arrow_back</mat-icon>
+            </button>
+            
+            <div class="header-text">
+              <div class="dataset-info">
+                <div class="dataset-type-badge" [ngClass]="dataset.dataType">
+                  <mat-icon>{{ getDataTypeIcon() }}</mat-icon>
+                  <span>{{ getDataTypeLabel() }}</span>
+                </div>
+                <h1 class="page-title">Contribute to {{ dataset.name }}</h1>
+                <p class="page-subtitle">Add new {{ getDataTypeLabel().toLowerCase() }} to this dataset</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contribution Form Card -->
+        <mat-card class="contribution-form-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>add</mat-icon>
+              New Contribution
+            </mat-card-title>
+            <mat-card-subtitle>
+              Submit {{ getDataTypeLabel().toLowerCase() }} for validation and inclusion in the dataset
+            </mat-card-subtitle>
+          </mat-card-header>
+          
+          <mat-card-content>
+            <form [formGroup]="contributionForm" (ngSubmit)="onSubmit()" class="contribution-form">
+              
+              <!-- Data Type Specific Content -->
+              <div class="data-section">
+                <h3 class="section-title">
+                  <mat-icon>{{ getDataTypeIcon() }}</mat-icon>
+                  {{ getDataTypeLabel() }} Content
+                </h3>
+                
+                <!-- Image Upload -->
+                <div *ngIf="dataset.dataType === 'image'" class="image-upload-section">
+                  <div class="upload-area" 
+                       [class.dragover]="isDragOver"
+                       (dragover)="onDragOver($event)"
+                       (dragleave)="onDragLeave($event)"
+                       (drop)="onDrop($event)"
+                       (click)="fileInput.click()">
+                    
+                    <input #fileInput
+                           type="file"
+                           accept="image/*"
+                           (change)="onFileSelected($event)"
+                           style="display: none">
+                    
+                    <div class="upload-content" *ngIf="!selectedFile && !previewUrl">
+                      <mat-icon class="upload-icon">cloud_upload</mat-icon>
+                      <h4>Upload Image</h4>
+                      <p>Drag and drop an image here, or click to browse</p>
+                      <small>Supported formats: JPEG, PNG, WebP, GIF (max 10MB)</small>
+                    </div>
+                    
+                    <div class="preview-content" *ngIf="previewUrl">
+                      <img [src]="previewUrl" alt="Preview" class="image-preview">
+                      <div class="file-info">
+                        <span class="file-name">{{ selectedFile?.name }}</span>
+                        <span class="file-size">{{ formatFileSize(selectedFile?.size || 0) }}</span>
+                        <button mat-icon-button color="warn" (click)="removeFile($event)" type="button">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Image Annotations -->
+                  <div class="annotations-section" *ngIf="selectedFile">
+                    <h4>Image Annotations</h4>
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Image Description</mat-label>
+                      <textarea 
+                        matInput 
+                        formControlName="imageDescription"
+                        placeholder="Describe what's in the image..."
+                        rows="2"
+                      ></textarea>
+                    </mat-form-field>
+                    
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Categories/Labels</mat-label>
+                      <mat-chip-grid #chipGrid>
+                        <mat-chip-row 
+                          *ngFor="let label of imageLabels"
+                          (removed)="removeLabel(label)"
+                          [removable]="true">
+                          {{ label }}
+                          <mat-icon matChipRemove>cancel</mat-icon>
+                        </mat-chip-row>
+                      </mat-chip-grid>
+                      <input 
+                        matInput
+                        #labelInput
+                        [formControl]="labelControl"
+                        [matChipInputFor]="chipGrid"
+                        [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                        (matChipInputTokenEnd)="addLabel($event)"
+                        placeholder="Add labels..."
+                      >
+                    </mat-form-field>
+                  </div>
+                </div>
+                
+                <!-- Text Input -->
+                <div *ngIf="dataset.dataType === 'text'" class="text-input-section">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Text Content *</mat-label>
+                    <textarea 
+                      matInput 
+                      formControlName="textContent"
+                      placeholder="Enter your text content here..."
+                      rows="6"
+                      maxlength="50000"
+                    ></textarea>
+                    <mat-hint align="end">{{ textContent?.value?.length || 0 }}/50000</mat-hint>
+                    <mat-error>{{ getFieldError('textContent') }}</mat-error>
+                  </mat-form-field>
+                  
+                  <!-- Text Annotations -->
+                  <div class="annotations-section">
+                    <h4>Text Annotations</h4>
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Category/Type</mat-label>
+                      <input 
+                        matInput 
+                        formControlName="textCategory"
+                        placeholder="e.g., review, article, social media post"
+                      >
+                    </mat-form-field>
+                    
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Sentiment (if applicable)</mat-label>
+                      <mat-select formControlName="sentiment">
+                        <mat-option value="">Not specified</mat-option>
+                        <mat-option value="positive">Positive</mat-option>
+                        <mat-option value="neutral">Neutral</mat-option>
+                        <mat-option value="negative">Negative</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                </div>
+                
+                <!-- Structured Data Input -->
+                <div *ngIf="dataset.dataType === 'structured'" class="structured-input-section">
+                  <mat-tab-group>
+                    <mat-tab label="JSON Input">
+                      <div class="tab-content">
+                        <mat-form-field appearance="outline" class="full-width">
+                          <mat-label>JSON Data *</mat-label>
+                          <textarea 
+                            matInput 
+                            formControlName="jsonData"
+                            placeholder='{"key": "value", "array": [1, 2, 3]}'
+                            rows="8"
+                          ></textarea>
+                          <mat-hint>Enter valid JSON data</mat-hint>
+                          <mat-error>{{ getFieldError('jsonData') }}</mat-error>
+                        </mat-form-field>
+                      </div>
+                    </mat-tab>
+                    
+                    <mat-tab label="File Upload">
+                      <div class="tab-content">
+                        <div class="file-upload-area" (click)="structuredFileInput.click()">
+                          <input #structuredFileInput
+                                 type="file"
+                                 accept=".csv,.json,.tsv"
+                                 (change)="onStructuredFileSelected($event)"
+                                 style="display: none">
+                          
+                          <div class="upload-content" *ngIf="!selectedStructuredFile">
+                            <mat-icon class="upload-icon">description</mat-icon>
+                            <h4>Upload Data File</h4>
+                            <p>Click to upload CSV, JSON, or TSV file</p>
+                            <small>Supported formats: .csv, .json, .tsv (max 10MB)</small>
+                          </div>
+                          
+                          <div class="file-info" *ngIf="selectedStructuredFile">
+                            <mat-icon>description</mat-icon>
+                            <span class="file-name">{{ selectedStructuredFile.name }}</span>
+                            <span class="file-size">{{ formatFileSize(selectedStructuredFile.size) }}</span>
+                            <button mat-icon-button color="warn" (click)="removeStructuredFile($event)" type="button">
+                              <mat-icon>delete</mat-icon>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </mat-tab>
+                  </mat-tab-group>
+                  
+                  <!-- Schema Information -->
+                  <div class="schema-section">
+                    <h4>Schema Information</h4>
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Data Schema/Fields</mat-label>
+                      <textarea 
+                        matInput 
+                        formControlName="schemaDescription"
+                        placeholder="Describe the structure and meaning of your data fields..."
+                        rows="3"
+                      ></textarea>
+                    </mat-form-field>
+                  </div>
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <!-- Metadata Section -->
+              <div class="metadata-section">
+                <h3 class="section-title">
+                  <mat-icon>info</mat-icon>
+                  Contribution Details
+                </h3>
+                
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Description</mat-label>
+                  <textarea 
+                    matInput 
+                    formControlName="description"
+                    placeholder="Provide context about this contribution..."
+                    rows="3"
+                    maxlength="1000"
+                  ></textarea>
+                  <mat-hint align="end">{{ description?.value?.length || 0 }}/1000</mat-hint>
+                  <mat-error>{{ getFieldError('description') }}</mat-error>
+                </mat-form-field>
+
+                <!-- Tags -->
+                <div class="tags-section">
+                  <h4>Tags</h4>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Add Tags</mat-label>
+                    <mat-chip-grid #tagChipGrid>
+                      <mat-chip-row 
+                        *ngFor="let tag of contributionTags"
+                        (removed)="removeTag(tag)"
+                        [removable]="true">
+                        {{ tag }}
+                        <mat-icon matChipRemove>cancel</mat-icon>
+                      </mat-chip-row>
+                    </mat-chip-grid>
+                    <input 
+                      matInput
+                      #tagInput
+                      [formControl]="tagControl"
+                      [matChipInputFor]="tagChipGrid"
+                      [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                      (matChipInputTokenEnd)="addTag($event)"
+                      placeholder="Add tags..."
+                    >
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <!-- Submission Guidelines -->
+              <div class="guidelines-section">
+                <h3 class="section-title">
+                  <mat-icon>rule</mat-icon>
+                  Submission Guidelines
+                </h3>
+                
+                <div class="guidelines-content">
+                  <div class="guideline-item">
+                    <mat-icon color="primary">check_circle</mat-icon>
+                    <span>Ensure your contribution is relevant to the dataset's purpose</span>
+                  </div>
+                  <div class="guideline-item">
+                    <mat-icon color="primary">check_circle</mat-icon>
+                    <span>Provide accurate and descriptive annotations</span>
+                  </div>
+                  <div class="guideline-item">
+                    <mat-icon color="primary">check_circle</mat-icon>
+                    <span>Your contribution will be reviewed by community validators</span>
+                  </div>
+                  <div class="guideline-item">
+                    <mat-icon color="primary">check_circle</mat-icon>
+                    <span>You retain rights to your original content with proper attribution</span>
+                  </div>
+                </div>
+              </div>
+              
+            </form>
+          </mat-card-content>
+          
+          <!-- Action Buttons -->
+          <mat-card-actions class="form-actions">
+            <div class="action-group">
+              <button 
+                mat-button 
+                type="button" 
+                (click)="onCancel()"
+                [disabled]="isSubmitting"
+              >
+                <mat-icon>close</mat-icon>
+                Cancel
+              </button>
+              
+              <button 
+                mat-button 
+                type="button" 
+                (click)="saveDraft()"
+                [disabled]="isSubmitting || !hasContent()"
+                matTooltip="Save as draft"
+              >
+                <mat-icon>save</mat-icon>
+                Save Draft
+              </button>
+            </div>
+            
+            <div class="primary-actions">
+              <button 
+                mat-raised-button 
+                color="primary" 
+                type="submit"
+                (click)="onSubmit()"
+                [disabled]="!isFormValid() || isSubmitting"
+              >
+                <mat-spinner diameter="20" *ngIf="isSubmitting"></mat-spinner>
+                <mat-icon *ngIf="!isSubmitting">publish</mat-icon>
+                <span *ngIf="!isSubmitting">Submit for Review</span>
+                <span *ngIf="isSubmitting">Submitting...</span>
+              </button>
+            </div>
+          </mat-card-actions>
+        </mat-card>
+
+        <!-- Dataset Information Card -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>info</mat-icon>
+              Dataset Information
+            </mat-card-title>
+          </mat-card-header>
+          
+          <mat-card-content>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Name:</label>
+                <span>{{ dataset.name }}</span>
+              </div>
+              <div class="info-item" *ngIf="dataset.description">
+                <label>Description:</label>
+                <span>{{ dataset.description }}</span>
+              </div>
+              <div class="info-item">
+                <label>Data Type:</label>
+                <span>{{ getDataTypeLabel() }}</span>
+              </div>
+              <div class="info-item">
+                <label>Contributions:</label>
+                <span>{{ dataset.contributionCount | number }}</span>
+              </div>
+              <div class="info-item">
+                <label>Validated:</label>
+                <span>{{ dataset.validationCount | number }}</span>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>

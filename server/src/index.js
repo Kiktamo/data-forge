@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const http = require('http');
+const path = require('path');
 
 // Import database connection
 const sequelize = require('./config/database');
@@ -14,6 +15,8 @@ require('./models');
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const datasetRoutes = require('./routes/dataset.routes');
+const contributionRoutes = require('./routes/contribution.routes');
+const fileRoutes = require('./routes/file.routes');
 
 // Import WebSocket service
 const WebSocketService = require('./services/websocket.service');
@@ -25,7 +28,10 @@ const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false
+}));
 
 // CORS configuration for network access
 const corsOptions = {
@@ -49,18 +55,22 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // Reject other origins
-    callback(new Error('Not allowed by CORS'));
+    // For file serving, be more permissive
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Cache-Control']
 };
 
 app.use(cors(corsOptions));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve uploaded files with basic static serving (fallback)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -71,12 +81,24 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
+// API Routes - IMPORTANT: Order matters!
 app.use('/api/auth', authRoutes);
+app.use('/api/files', fileRoutes); // File serving with access control - put this BEFORE datasets
 app.use('/api/datasets', datasetRoutes);
+app.use('/api', contributionRoutes); // This registers /api/datasets/:id/contributions
+
+// Debug: Log all registered routes (remove in production)
+console.log('🛣️ Registered API routes:');
+console.log('  /api/auth/* - Authentication routes');
+console.log('  /api/files/* - File serving routes');
+console.log('  /api/datasets/* - Dataset routes');
+console.log('  /api/datasets/:id/contributions - Contribution routes');
+console.log('  /api/contributions/* - Individual contribution routes');
+console.log('  /api/validations/* - Validation routes');
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log(`❌ 404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     message: 'Route not found'
@@ -117,6 +139,8 @@ const startServer = async () => {
       console.log(`📍 Health check: http://localhost:${PORT}/health`);
       console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
       console.log(`📊 Datasets API: http://localhost:${PORT}/api/datasets`);
+      console.log(`📁 Files API: http://localhost:${PORT}/api/files`);
+      console.log(`📤 Contributions API: http://localhost:${PORT}/api/datasets/:id/contributions`);
       console.log(`🔌 WebSocket: ws://localhost:${PORT}/ws`);
       console.log(`🌍 Server accessible on network at: http://0.0.0.0:${PORT}`);
     });

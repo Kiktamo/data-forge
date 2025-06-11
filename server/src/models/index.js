@@ -1,47 +1,78 @@
+const sequelize = require('../config/database');
+
+// Import models
 const User = require('./user.model');
 const Dataset = require('./dataset.model');
+const Contribution = require('./contribution.model');
+const Validation = require('./validation.model');
 
 // Define associations
+
+// User associations
 User.hasMany(Dataset, {
   foreignKey: 'ownerId',
-  as: 'datasets',
-  onDelete: 'CASCADE'
+  as: 'ownedDatasets'
 });
 
+User.hasMany(Contribution, {
+  foreignKey: 'contributorId',
+  as: 'contributions'
+});
+
+User.hasMany(Validation, {
+  foreignKey: 'validatorId',
+  as: 'validations'
+});
+
+// Dataset associations
 Dataset.belongsTo(User, {
   foreignKey: 'ownerId',
-  as: 'owner',
-  onDelete: 'CASCADE'
+  as: 'owner'
 });
 
-// Handle temporal model associations
-// The sequelize-temporal library creates a history model that we need to associate
-try {
-  // Get the history model created by sequelize-temporal
-  const DatasetHistory = Dataset.sequelize.models.DatasetHistory;
-  
-  if (DatasetHistory) {
-    // Associate the history model with User
-    DatasetHistory.belongsTo(User, {
-      foreignKey: 'ownerId',
-      as: 'owner',
-      onDelete: 'SET NULL' // Don't cascade delete history when user is deleted
-    });
-    
-    // Also allow User to access history
-    User.hasMany(DatasetHistory, {
-      foreignKey: 'ownerId',
-      as: 'datasetHistory'
-    });
-  }
-} catch (error) {
-  console.log('Note: DatasetHistory model not found for associations (temporal may not be initialized yet)');
-}
+Dataset.hasMany(Contribution, {
+  foreignKey: 'datasetId',
+  as: 'contributions'
+});
 
-// Export models
+// Contribution associations
+Contribution.belongsTo(User, {
+  foreignKey: 'contributorId',
+  as: 'contributor'
+});
+
+Contribution.belongsTo(Dataset, {
+  foreignKey: 'datasetId',
+  as: 'dataset'
+});
+
+Contribution.hasMany(Validation, {
+  foreignKey: 'contributionId',
+  as: 'validations'
+});
+
+// Validation associations
+Validation.belongsTo(User, {
+  foreignKey: 'validatorId',
+  as: 'validator'
+});
+
+Validation.belongsTo(Contribution, {
+  foreignKey: 'contributionId',
+  as: 'contribution'
+});
+
+// Export all models and sequelize instance
 module.exports = {
+  sequelize,
   User,
   Dataset,
-  // Export the history model if it exists
-  DatasetHistory: Dataset.sequelize?.models?.DatasetHistory || null
+  Contribution,
+  Validation
 };
+
+// Also export individual models for backward compatibility
+module.exports.User = User;
+module.exports.Dataset = Dataset;
+module.exports.Contribution = Contribution;
+module.exports.Validation = Validation;

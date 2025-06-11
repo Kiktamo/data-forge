@@ -1,27 +1,188 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environments';
 import { Contribution } from '../models/contribution.model';
+
+export interface ContributionListResponse {
+  success: boolean;
+  data: {
+    contributions: Contribution[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalItems: number;
+      itemsPerPage: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  };
+}
+
+export interface ContributionResponse {
+  success: boolean;
+  data: {
+    contribution: Contribution;
+    validationSummary?: ValidationSummary;
+  };
+  message?: string;
+}
+
+export interface ValidationSummary {
+  totalValidations: number;
+  approved: number;
+  rejected: number;
+  needsReview: number;
+  averageConfidence: number;
+  validations: Validation[];
+}
+
+export interface Validation {
+  id: number;
+  contributionId: number;
+  validatorId: number;
+  status: 'approved' | 'rejected' | 'needs_review';
+  confidence?: number;
+  notes?: string;
+  validationCriteria?: any;
+  timeSpent?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  validator?: {
+    id: number;
+    username: string;
+    fullName?: string;
+  };
+}
+
+export interface ContributionQueryParams {
+  page?: number;
+  limit?: number;
+  status?: 'pending' | 'approved' | 'rejected';
+  contributorId?: number;
+  datasetId?: number;
+  sortBy?: 'createdAt' | 'updatedAt' | 'validationStatus';
+  sortOrder?: 'ASC' | 'DESC';
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class ContributionService {
+  private apiUrl = `${environment.apiUrl}`;
+
   constructor(private http: HttpClient) {}
   
-  getContributionsByDataset(datasetId: string): Observable<Contribution[]> {
-    return this.http.get<Contribution[]>(`/api/datasets/${datasetId}/contributions`);
+  // Get contributions for a dataset
+  getContributionsByDataset(datasetId: number, params: ContributionQueryParams = {}): Observable<ContributionListResponse> {
+    return this.http.get<ContributionListResponse>(`${this.apiUrl}/datasets/${datasetId}/contributions`, { params: params as any });
   }
   
-  getContributionById(id: string): Observable<Contribution> {
-    return this.http.get<Contribution>(`/api/contributions/${id}`);
+  // Get single contribution by ID
+  getContributionById(id: number): Observable<ContributionResponse> {
+    return this.http.get<ContributionResponse>(`${this.apiUrl}/contributions/${id}`);
   }
   
-  createContribution(contribution: Partial<Contribution>): Observable<Contribution> {
-    return this.http.post<Contribution>('/api/contributions', contribution);
+  // Create new contribution
+  createContribution(datasetId: number, formData: FormData): Observable<ContributionResponse> {
+    return this.http.post<ContributionResponse>(`${this.apiUrl}/datasets/${datasetId}/contributions`, formData);
   }
   
-  validateContribution(id: string, status: 'approved' | 'rejected', comment?: string): Observable<Contribution> {
-    return this.http.post<Contribution>(`/api/contributions/${id}/validate`, { status, comment });
+  // Update contribution
+  updateContribution(id: number, updates: any): Observable<ContributionResponse> {
+    return this.http.put<ContributionResponse>(`${this.apiUrl}/contributions/${id}`, updates);
+  }
+  
+  // Delete contribution
+  deleteContribution(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/contributions/${id}`);
+  }
+  
+  // Get user's contributions
+  getUserContributions(userId: number, params: ContributionQueryParams = {}): Observable<ContributionListResponse> {
+    return this.http.get<ContributionListResponse>(`${this.apiUrl}/users/${userId}/contributions`, { params: params as any });
+  }
+  
+  // Validation methods
+  createValidation(contributionId: number, validation: {
+    status: 'approved' | 'rejected' | 'needs_review';
+    confidence?: number;
+    notes?: string;
+    validationCriteria?: any;
+    timeSpent?: number;
+  }): Observable<{ success: boolean; data: { validation: Validation }; message?: string }> {
+    return this.http.post<any>(`${this.apiUrl}/contributions/${contributionId}/validations`, validation);
+  }
+  
+  // Get validations for a contribution
+  getValidationsForContribution(contributionId: number): Observable<{ success: boolean; data: ValidationSummary }> {
+    return this.http.get<any>(`${this.apiUrl}/contributions/${contributionId}/validations`);
+  }
+  
+  // Get pending contributions for validation
+  getPendingContributions(params: ContributionQueryParams = {}): Observable<ContributionListResponse> {
+    return this.http.get<ContributionListResponse>(`${this.apiUrl}/validations/pending`, { params: params as any });
+  }
+  
+  // Update validation
+  updateValidation(id: number, updates: {
+    status?: 'approved' | 'rejected' | 'needs_review';
+    confidence?: number;
+    notes?: string;
+    validationCriteria?: any;
+    timeSpent?: number;
+  }): Observable<{ success: boolean; data: { validation: Validation }; message?: string }> {
+    return this.http.put<any>(`${this.apiUrl}/validations/${id}`, updates);
+  }
+  
+  // Get file URL for contribution files
+  getContributionFileUrl(contribution: Contribution): string | null {
+    if (!contribution.content?.file?.filename) {
+      return null;
+    }
+    
+    const type = contribution.dataType === 'image' ? 'images' :
+                 contribution.dataType === 'text' ? 'text' : 'structured';
+    
+    // For public/collaborative datasets, no token needed
+    // For private datasets, token will be handled by browser's auth headers
+    const baseUrl = `${environment.apiUrl}/files/contributions/${type}/${contribution.content.file.filename}`;
+    
+    // Add token for authenticated requests if available
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      return `${baseUrl}?token=${encodeURIComponent(token)}`;
+    }
+    
+    return baseUrl;
+  }
+  
+  // Get thumbnail URL for image contributions
+  getContributionThumbnailUrl(contribution: Contribution): string | null {
+    if (contribution.dataType !== 'image' || !contribution.content?.file?.filename) {
+      return null;
+    }
+    
+    const baseUrl = `${environment.apiUrl}/files/contributions/images/${contribution.content.file.filename}/thumbnail`;
+    
+    // Add token for authenticated requests if available
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      return `${baseUrl}?token=${encodeURIComponent(token)}`;
+    }
+    
+    return baseUrl;
+  }
+  
+  // Get file info/metadata
+  getContributionFileInfo(contribution: Contribution): Observable<any> {
+    if (!contribution.content?.file?.filename) {
+      throw new Error('No file associated with this contribution');
+    }
+    
+    const type = contribution.dataType === 'image' ? 'images' :
+                 contribution.dataType === 'text' ? 'text' : 'structured';
+    
+    return this.http.get(`${environment.apiUrl}/files/contributions/${type}/${contribution.content.file.filename}/info`);
   }
 }

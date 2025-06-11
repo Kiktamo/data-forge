@@ -3,6 +3,7 @@ const Temporal = require('sequelize-temporal');
 const sequelize = require('../config/database');
 
 // Add temporal functionality for automatic versioning
+// Add temporal functionality for automatic versioning
 const Dataset = Temporal(sequelize.define('Dataset', {
   id: {
     type: DataTypes.INTEGER,
@@ -72,6 +73,11 @@ const Dataset = Temporal(sequelize.define('Dataset', {
     defaultValue: true,
     field: 'is_active'
   }
+}, {
+  // Force lowercase table name to match PostgreSQL convention
+  tableName: 'datasets',
+  // Disable Sequelize's automatic table name pluralization
+  freezeTableName: true
 }), sequelize, {
   // Enable full history tracking (saves all states, not just changes)
   full: true,

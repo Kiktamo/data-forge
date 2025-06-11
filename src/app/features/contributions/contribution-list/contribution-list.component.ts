@@ -1,23 +1,24 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatBadgeModule } from '@angular/material/badge';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 
-interface Contribution {
-  id: string;
-  datasetId: string;
-  datasetName: string;
-  contributionDate: Date;
-  contentType: 'image' | 'text' | 'structured';
-  status: 'pending' | 'approved' | 'rejected';
-  validationCount: number;
-}
+import { Contribution } from '../../../core/models/contribution.model';
+import { ContributionService, ContributionQueryParams } from '../../../core/services/contribution.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-contribution-list',
@@ -29,80 +30,144 @@ interface Contribution {
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
-    MatBadgeModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
     MatTabsModule,
-    MatProgressSpinnerModule
+    MatTooltipModule,
+    MatBadgeModule,
+    MatPaginatorModule,
+    MatFormFieldModule,
+    MatSelectModule
   ],
   templateUrl: './contribution-list.component.html',
   styleUrls: ['./contribution-list.component.scss']
 })
-export class ContributionListComponent implements OnInit {
-  isLoading = true;
+export class ContributionListComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  
+  // Data properties
   contributions: Contribution[] = [];
-  pendingContributions: Contribution[] = [];
-  approvedContributions: Contribution[] = [];
-  rejectedContributions: Contribution[] = [];
+  isLoading = false;
+  
+  // Pagination
+  currentPage = 1;
+  pageSize = 12;
+  pageSizeOptions = [6, 12, 24, 48];
+  totalItems = 0;
+  totalPages = 0;
+  hasNext = false;
+  hasPrev = false;
+  
+  // Filters
+  selectedStatus = '';
+  
+  constructor(
+    private contributionService: ContributionService,
+    public authService: AuthService,
+    private route: ActivatedRoute
+  ) {}
   
   ngOnInit(): void {
-    // Simulate API call to fetch contributions
-    setTimeout(() => {
-      this.contributions = this.generateMockContributions(10);
-      this.filterContributions();
-      this.isLoading = false;
-    }, 1000);
-  }
-  
-  // Filter contributions by status
-  private filterContributions(): void {
-    this.pendingContributions = this.contributions.filter(c => c.status === 'pending');
-    this.approvedContributions = this.contributions.filter(c => c.status === 'approved');
-    this.rejectedContributions = this.contributions.filter(c => c.status === 'rejected');
-  }
-  
-  private generateMockContributions(count: number): Contribution[] {
-    const contributions: Contribution[] = [];
-    const contentTypes: Array<'image' | 'text' | 'structured'> = ['image', 'text', 'structured'];
-    const statuses: Array<'pending' | 'approved' | 'rejected'> = ['pending', 'approved', 'rejected'];
-    
-    for (let i = 1; i <= count; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
-      
-      contributions.push({
-        id: `contrib-${i}`,
-        datasetId: `ds-${Math.floor(Math.random() * 5) + 1}`,
-        datasetName: `Dataset ${Math.floor(Math.random() * 5) + 1}`,
-        contributionDate: date,
-        contentType: contentTypes[Math.floor(Math.random() * contentTypes.length)],
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        validationCount: Math.floor(Math.random() * 5)
-      });
+    // Check if user is authenticated
+    if (!this.authService.currentUser) {
+      return;
     }
     
-    return contributions;
+    this.loadContributions();
   }
   
-  getStatusClass(status: string): string {
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+  
+  // Load user's contributions
+  loadContributions(): void {
+    if (!this.authService.currentUser) return;
+    
+    this.isLoading = true;
+    
+    const params: ContributionQueryParams = {
+      page: this.currentPage,
+      limit: this.pageSize,
+      sortBy: 'createdAt',
+      sortOrder: 'DESC'
+    };
+    
+    if (this.selectedStatus) {
+      params.status = this.selectedStatus as any;
+    }
+    
+    this.contributionService.getUserContributions(
+      Number(this.authService.currentUser.id), 
+      params
+    ).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        console.log('Contributions loaded:', response);
+        this.contributions = response.data.contributions;
+        this.currentPage = response.data.pagination.currentPage;
+        this.totalItems = response.data.pagination.totalItems;
+        this.totalPages = response.data.pagination.totalPages;
+        this.hasNext = response.data.pagination.hasNext;
+        this.hasPrev = response.data.pagination.hasPrev;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading contributions:', error);
+        this.isLoading = false;
+      }
+    });
+  }
+  
+  // Handle status filter change
+  onStatusChange(): void {
+    this.currentPage = 1;
+    this.loadContributions();
+  }
+  
+  // Handle page change
+  onPageChange(event: PageEvent): void {
+    this.currentPage = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.loadContributions();
+  }
+  
+  // Utility methods
+  getDataTypeIcon(dataType: string): string {
+    switch (dataType) {
+      case 'image': return 'image';
+      case 'text': return 'text_fields';
+      case 'structured': return 'table_chart';
+      default: return 'dataset';
+    }
+  }
+  
+  getDataTypeLabel(dataType: string): string {
+    switch (dataType) {
+      case 'image': return 'Image';
+      case 'text': return 'Text';
+      case 'structured': return 'Structured';
+      default: return 'Unknown';
+    }
+  }
+  
+  getStatusLabel(status: string): string {
     switch (status) {
-      case 'approved':
-        return 'status-approved';
-      case 'rejected':
-        return 'status-rejected';
-      default:
-        return 'status-pending';
+      case 'pending': return 'Pending Review';
+      case 'approved': return 'Approved';
+      case 'rejected': return 'Rejected';
+      default: return 'Unknown';
     }
   }
   
-  getContentTypeIcon(type: string): string {
-    switch (type) {
-      case 'image':
-        return 'image';
-      case 'text':
-        return 'text_fields';
-      case 'structured':
-        return 'table_chart';
-      default:
-        return 'data_object';
-    }
+  getImagePreviewUrl(contribution: Contribution): string {
+    return this.contributionService.getContributionFileUrl(contribution) || '/assets/images/placeholder.png';
+  }
+  
+  onImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'https://placehold.co/400';
   }
 }
