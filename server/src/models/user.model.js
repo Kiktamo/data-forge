@@ -99,12 +99,12 @@ User.prototype.isValidPassword = async function(password) {
 User.prototype.toSafeObject = function() {
   const { 
     id, username, email, fullName, bio, 
-    profileImageUrl, roles, createdAt, updatedAt 
+    profileImageUrl, roles, created_at, updated_at 
   } = this;
   
   return {
     id, username, email, fullName, bio, 
-    profileImageUrl, roles, createdAt, updatedAt
+    profileImageUrl, roles, created_at, updated_at
   };
 };
 

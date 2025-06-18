@@ -1,0 +1,432 @@
+<div class="validation-queue-container">
+  <div class="page-header">
+    <h1 class="page-title">Validation Queue</h1>
+    <p class="page-subtitle">
+      Review and validate contributions from the community
+    </p>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="stats-overview">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon pending">
+          <mat-icon [matBadge]="totalPending" matBadgeColor="warn"
+            >pending</mat-icon
+          >
+        </div>
+        <div class="stat-info">
+          <div class="stat-number">{{ totalPending }}</div>
+          <div class="stat-label">Pending Review</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon validated">
+          <mat-icon>verified</mat-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-number">{{ validatedToday }}</div>
+          <div class="stat-label">Validated Today</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon queue">
+          <mat-icon>queue</mat-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-number">{{ contributions.length }}</div>
+          <div class="stat-label">In Current Queue</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-container">
+    <mat-form-field appearance="outline">
+      <mat-label>Data Type</mat-label>
+      <mat-select
+        [(value)]="selectedDataType"
+        (selectionChange)="applyFilters()"
+      >
+        <mat-option value="">All Types</mat-option>
+        <mat-option value="image">Images</mat-option>
+        <mat-option value="text">Text</mat-option>
+        <mat-option value="structured">Structured Data</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Sort By</mat-label>
+      <mat-select [(value)]="selectedSortBy" (selectionChange)="applyFilters()">
+        <mat-option value="created_at-ASC">Oldest First</mat-option>
+        <mat-option value="created_at-DESC">Newest First</mat-option>
+        <mat-option value="dataType-ASC">Data Type</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Loading spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading pending contributions...</p>
+  </div>
+
+  <!-- No contributions message -->
+  <div
+    class="no-contributions"
+    *ngIf="!isLoading && contributions.length === 0"
+  >
+    <mat-icon>check_circle</mat-icon>
+    <h3>All caught up!</h3>
+    <p>There are no pending contributions to validate at the moment.</p>
+    <div class="no-contributions-actions">
+      <a mat-raised-button color="primary" routerLink="/datasets">
+        Browse Datasets
+      </a>
+    </div>
+  </div>
+
+  <!-- Contributions validation list -->
+  <div class="validation-list" *ngIf="!isLoading && contributions.length > 0">
+    <mat-card
+      class="validation-card"
+      *ngFor="let contribution of contributions"
+    >
+      <mat-card-header>
+        <div class="contribution-header">
+          <div class="data-type-badge" [ngClass]="contribution.dataType">
+            <mat-icon>{{ getDataTypeIcon(contribution.dataType) }}</mat-icon>
+            <span>{{ getDataTypeLabel(contribution.dataType) }}</span>
+          </div>
+          <div class="dataset-info">
+            <h3>
+              <a [routerLink]="['/datasets', contribution.datasetId]">
+                {{ contribution.dataset?.name || "Unknown Dataset" }}
+              </a>
+            </h3>
+            <p>
+              by
+              {{
+                contribution.contributor?.fullName ||
+                  contribution.contributor?.username ||
+                  "Unknown User"
+              }}
+            </p>
+          </div>
+          <div class="time-info">
+            <mat-icon>schedule</mat-icon>
+            <span>{{ contribution.created_at | date : "short" }}</span>
+          </div>
+        </div>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Content Preview -->
+        <div class="content-preview">
+          <!-- Image preview -->
+          <div
+            *ngIf="
+              contribution.dataType === 'image' && contribution.content?.file
+            "
+            class="image-preview-section"
+          >
+            <div class="preview-image">
+              <img
+                [src]="getImagePreviewUrl(contribution)"
+                alt="Contribution preview"
+              />
+            </div>
+            <div
+              class="image-annotations"
+              *ngIf="contribution.content?.annotations"
+            >
+              <div
+                class="annotation-item"
+                *ngIf="contribution.content.annotations.description"
+              >
+                <strong>Description:</strong>
+                {{ contribution.content.annotations.description }}
+              </div>
+              <div
+                class="annotation-item"
+                *ngIf="contribution.content.annotations.labels?.length"
+              >
+                <strong>Labels:</strong>
+                <mat-chip-set>
+                  <mat-chip
+                    *ngFor="
+                      let label of contribution.content.annotations.labels
+                    "
+                  >
+                    {{ label }}
+                  </mat-chip>
+                </mat-chip-set>
+              </div>
+            </div>
+          </div>
+
+          <!-- Text preview -->
+          <div
+            *ngIf="contribution.dataType === 'text'"
+            class="text-preview-section"
+          >
+            <div class="text-content">
+              <p>{{ contribution.content?.text | slice : 0 : 300 }}...</p>
+            </div>
+            <div
+              class="text-annotations"
+              *ngIf="contribution.content?.annotations"
+            >
+              <div
+                class="annotation-item"
+                *ngIf="contribution.content.annotations.category"
+              >
+                <strong>Category:</strong>
+                {{ contribution.content.annotations.category }}
+              </div>
+              <div
+                class="annotation-item"
+                *ngIf="contribution.content.annotations.sentiment"
+              >
+                <strong>Sentiment:</strong>
+                {{ contribution.content.annotations.sentiment }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Structured data preview -->
+          <div
+            *ngIf="contribution.dataType === 'structured'"
+            class="structured-preview-section"
+          >
+            <div class="structured-info">
+              <mat-icon>table_chart</mat-icon>
+              <div class="info-details">
+                <span class="info-label">Structured Data Contribution</span>
+                <span class="info-value" *ngIf="contribution.content?.file">
+                  File: {{ contribution.content.file.originalName }}
+                </span>
+              </div>
+            </div>
+            <div
+              class="structured-annotations"
+              *ngIf="contribution.content?.annotations?.schemaDescription"
+            >
+              <strong>Schema:</strong>
+              {{ contribution.content.annotations.schemaDescription }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Contribution Metadata -->
+        <div
+          class="contribution-metadata"
+          *ngIf="
+            contribution.metadata?.description ||
+            contribution.metadata?.tags?.length
+          "
+        >
+          <mat-divider></mat-divider>
+          <div class="metadata-content">
+            <div
+              class="metadata-item"
+              *ngIf="contribution.metadata?.description"
+            >
+              <strong>Description:</strong>
+              {{ contribution.metadata.description }}
+            </div>
+            <div
+              class="metadata-item"
+              *ngIf="contribution.metadata?.tags?.length"
+            >
+              <strong>Tags:</strong>
+              <mat-chip-set>
+                <mat-chip *ngFor="let tag of contribution.metadata.tags">{{
+                  tag
+                }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation Form -->
+        <mat-expansion-panel
+          [expanded]="expandedContribution === contribution.id"
+          (opened)="openValidationForm(contribution)"
+          (closed)="closeValidationForm()"
+        >
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon>rate_review</mat-icon>
+              Validate This Contribution
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+
+          <form [formGroup]="validationForm" class="validation-form">
+            <!-- Validation Decision -->
+            <div class="decision-section">
+              <h4>Validation Decision</h4>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Status *</mat-label>
+                <mat-select formControlName="status">
+                  <mat-option value="approved">
+                    <mat-icon color="primary">check_circle</mat-icon>
+                    Approve
+                  </mat-option>
+                  <mat-option value="needs_review">
+                    <mat-icon color="warn">help</mat-icon>
+                    Needs Review
+                  </mat-option>
+                  <mat-option value="rejected">
+                    <mat-icon color="warn">cancel</mat-icon>
+                    Reject
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Confidence Level -->
+            <div class="confidence-section">
+              <h4>Confidence Level</h4>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>How confident are you in this decision?</mat-label>
+                <mat-select formControlName="confidence">
+                  <mat-option [value]="1.0">Very Confident (100%)</mat-option>
+                  <mat-option [value]="0.8">Confident (80%)</mat-option>
+                  <mat-option [value]="0.6"
+                    >Somewhat Confident (60%)</mat-option
+                  >
+                  <mat-option [value]="0.4"
+                    >Not Very Confident (40%)</mat-option
+                  >
+                  <mat-option [value]="0.2">Uncertain (20%)</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Quality Criteria -->
+            <div class="criteria-section">
+              <h4>Quality Assessment</h4>
+              <div class="criteria-grid">
+                <div
+                  class="criteria-item"
+                  *ngFor="let criterion of qualityCriteria"
+                >
+                  <label>{{ criterion.label }}</label>
+                  <!-- FIXED: Proper mat-slider configuration for Angular Material 17+ -->
+                  <mat-slider
+                    [min]="1"
+                    [max]="5"
+                    [step]="1"
+                    [discrete]="true"
+                    [showTickMarks]="true"
+                  >
+                    <input
+                      matSliderThumb
+                      [formControlName]="'criteria_' + criterion.key"
+                    />
+                  </mat-slider>
+                  <div class="slider-labels">
+                    <span>Poor</span>
+                    <span>Excellent</span>
+                  </div>
+                  <!-- Display current value -->
+                  <div class="slider-value">
+                    Value:
+                    {{
+                      validationForm.get("criteria_" + criterion.key)?.value ||
+                        3
+                    }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Validation Notes -->
+            <div class="notes-section">
+              <h4>Validation Notes</h4>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Provide feedback to the contributor</mat-label>
+                <textarea
+                  matInput
+                  formControlName="notes"
+                  placeholder="Explain your decision and provide constructive feedback..."
+                  rows="4"
+                  maxlength="2000"
+                ></textarea>
+                <mat-hint align="end"
+                  >{{ notes?.value?.length || 0 }}/2000</mat-hint
+                >
+              </mat-form-field>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="validation-actions">
+              <button mat-button type="button" (click)="closeValidationForm()">
+                Cancel
+              </button>
+              <button
+                mat-raised-button
+                color="primary"
+                [disabled]="validationForm.invalid || isSubmittingValidation"
+                (click)="submitValidation(contribution)"
+              >
+                <mat-spinner
+                  diameter="20"
+                  *ngIf="isSubmittingValidation"
+                ></mat-spinner>
+                <mat-icon *ngIf="!isSubmittingValidation">send</mat-icon>
+                <span *ngIf="!isSubmittingValidation">Submit Validation</span>
+                <span *ngIf="isSubmittingValidation">Submitting...</span>
+              </button>
+            </div>
+          </form>
+        </mat-expansion-panel>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button [routerLink]="['/datasets', contribution.datasetId]">
+          View Dataset
+        </button>
+        <button
+          mat-button
+          color="primary"
+          (click)="quickValidation(contribution, 'approved')"
+          [disabled]="isSubmittingValidation"
+        >
+          <mat-icon>thumb_up</mat-icon>
+          Quick Approve
+        </button>
+        <button
+          mat-button
+          color="warn"
+          (click)="quickValidation(contribution, 'rejected')"
+          [disabled]="isSubmittingValidation"
+        >
+          <mat-icon>thumb_down</mat-icon>
+          Quick Reject
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <!-- Pagination -->
+  <mat-paginator
+    *ngIf="!isLoading && totalItems > 0"
+    [length]="totalItems"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="pageSizeOptions"
+    [pageIndex]="currentPage - 1"
+    (page)="onPageChange($event)"
+    aria-label="Select page"
+    showFirstLastButtons
+  >
+  </mat-paginator>
+</div>

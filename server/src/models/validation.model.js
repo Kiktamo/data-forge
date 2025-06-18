@@ -64,7 +64,7 @@ const Validation = sequelize.define('Validation', {
 }, {
   tableName: 'validations',
   timestamps: true,
-  underscored: false,
+  underscored: true,
   indexes: [
     {
       fields: ['contribution_id']
@@ -76,7 +76,7 @@ const Validation = sequelize.define('Validation', {
       fields: ['status']
     },
     {
-      fields: ['createdAt']
+      fields: ['created_at']
     }
   ]
 });
@@ -85,12 +85,12 @@ const Validation = sequelize.define('Validation', {
 Validation.prototype.toSafeObject = function() {
   const {
     id, contributionId, validatorId, status, confidence, notes,
-    validationCriteria, timeSpent, isActive, createdAt, updatedAt
+    validationCriteria, timeSpent, isActive, created_at, updated_at
   } = this;
   
   return {
     id, contributionId, validatorId, status, confidence, notes,
-    validationCriteria, timeSpent, isActive, createdAt, updatedAt
+    validationCriteria, timeSpent, isActive, created_at, updated_at
   };
 };
 
@@ -105,7 +105,7 @@ Validation.getWithValidator = async function(whereClause = {}) {
       as: 'validator',
       attributes: ['id', 'username', 'fullName']
     }],
-    order: [['createdAt', 'DESC']]
+    order: [['created_at', 'DESC']]
   });
 };
 

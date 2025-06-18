@@ -11,26 +11,7 @@ const fs = require('fs').promises;
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    // Get dataset info to determine data type
-    const { datasetId } = req.params;
-    let dataType = 'general';
-    
-    try {
-      const dataset = await Dataset.findByPk(datasetId);
-      if (dataset) {
-        dataType = dataset.dataType;
-      }
-    } catch (error) {
-      console.log('Could not determine dataset type, using general folder');
-    }
-    
-    // Create type-specific directory
-    const typeFolder = dataType === 'image' ? 'images' : 
-                      dataType === 'text' ? 'text' : 
-                      dataType === 'structured' ? 'structured' : 'general';
-    
-    const uploadDir = path.join(__dirname, '../../uploads/contributions', typeFolder);
-    
+    const uploadDir = path.join(__dirname, '../../uploads/contributions');
     try {
       await fs.mkdir(uploadDir, { recursive: true });
       cb(null, uploadDir);
@@ -40,8 +21,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-    cb(null, `${file.fieldname}-${uniqueSuffix}-${sanitizedName}`);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -72,7 +52,7 @@ exports.getContributionsForDataset = async (req, res) => {
       limit = 20,
       status,
       contributorId,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'DESC'
     } = req.query;
 
@@ -210,7 +190,34 @@ exports.createContribution = [
       }
 
       const { datasetId } = req.params;
-      const { annotations, description, tags } = req.body;
+      const { annotations, description } = req.body;
+      
+      // Handle tags properly - they come as separate form fields
+      let tags = [];
+      if (req.body.tags) {
+        if (Array.isArray(req.body.tags)) {
+          tags = req.body.tags.filter(tag => tag && tag.trim());
+        } else if (typeof req.body.tags === 'string') {
+          try {
+            // Try to parse as JSON first
+            const parsed = JSON.parse(req.body.tags);
+            tags = Array.isArray(parsed) ? parsed.filter(tag => tag && tag.trim()) : [];
+          } catch (e) {
+            // If not JSON, treat as single tag
+            tags = req.body.tags.trim() ? [req.body.tags.trim()] : [];
+          }
+        }
+      }
+      
+      // Handle tags from form array format (tags[0], tags[1], etc.)
+      Object.keys(req.body).forEach(key => {
+        if (key.startsWith('tags[') && key.endsWith(']')) {
+          const tagValue = req.body[key];
+          if (tagValue && tagValue.trim()) {
+            tags.push(tagValue.trim());
+          }
+        }
+      });
 
       // Check if dataset exists and user can contribute
       const dataset = await Dataset.findOne({
@@ -239,7 +246,7 @@ exports.createContribution = [
       let content = {};
       let metadata = {
         description: description || '',
-        tags: tags ? (Array.isArray(tags) ? tags : tags.split(',')) : [],
+        tags: tags || [], // Use the processed tags array
         annotations: annotations ? JSON.parse(annotations) : {}
       };
 
@@ -263,21 +270,12 @@ exports.createContribution = [
             break;
           case 'text':
             // For text files, we might want to read the content
-            try {
-              const textContent = await fs.readFile(req.file.path, 'utf-8');
-              content = {
-                type: 'file',
-                file: fileInfo,
-                text: textContent.substring(0, 10000) // Limit text length
-              };
-            } catch (readError) {
-              console.log('Could not read text file content:', readError);
-              content = {
-                type: 'file',
-                file: fileInfo,
-                text: 'File uploaded - content could not be read'
-              };
-            }
+            const textContent = await fs.readFile(req.file.path, 'utf-8');
+            content = {
+              type: 'file',
+              file: fileInfo,
+              text: textContent.substring(0, 10000) // Limit text length
+            };
             break;
           case 'structured':
             content = {
@@ -497,7 +495,7 @@ exports.getUserContributions = async (req, res) => {
       limit = 20,
       datasetId,
       status,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'DESC'
     } = req.query;
 

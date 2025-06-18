@@ -113,8 +113,8 @@ const paginationValidation = [
     .withMessage('Limit must be between 1 and 100'),
   query('sortBy')
     .optional()
-    .isIn(['createdAt', 'updatedAt', 'validationStatus', 'dataType'])
-    .withMessage('Sort by must be createdAt, updatedAt, validationStatus, or dataType'),
+    .isIn(['created_at', 'updated_at', 'validationStatus', 'dataType'])
+    .withMessage('Sort by must be created_at, updated_at, validationStatus, or dataType'),
   query('sortOrder')
     .optional()
     .isIn(['ASC', 'DESC', 'asc', 'desc'])

@@ -15,8 +15,8 @@ export interface Contribution {
   validationNotes?: string;
   qualityScore?: number;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
   
   // Related data (from joins)
   contributor?: {
@@ -27,6 +27,7 @@ export interface Contribution {
   dataset?: {
     id: number;
     name: string;
+    description?: string;
     dataType: string;
     visibility: string;
     ownerId?: number;

@@ -7,29 +7,28 @@
 
   <!-- Dataset content -->
   <div *ngIf="!isLoading && dataset" class="dataset-content">
-    
     <!-- Header Section -->
     <div class="dataset-header">
       <div class="header-main">
         <div class="back-navigation">
-          <button 
-            mat-icon-button 
-            routerLink="/datasets" 
+          <button
+            mat-icon-button
+            routerLink="/datasets"
             matTooltip="Back to datasets"
           >
             <mat-icon>arrow_back</mat-icon>
           </button>
         </div>
-        
+
         <div class="dataset-info">
           <div class="title-section">
             <div class="dataset-type-badge" [ngClass]="dataset.dataType">
               <mat-icon>{{ getDataTypeIcon() }}</mat-icon>
               <span>{{ getDataTypeLabel() }}</span>
             </div>
-            
+
             <h1 class="dataset-title">{{ dataset.name }}</h1>
-            
+
             <div class="dataset-meta">
               <div class="meta-item">
                 <mat-icon>person</mat-icon>
@@ -41,7 +40,7 @@
               </div>
               <div class="meta-item">
                 <mat-icon>schedule</mat-icon>
-                <span>Updated {{ dataset.updatedAt | date:'medium' }}</span>
+                <span>Updated {{ dataset.updated_at | date : "medium" }}</span>
               </div>
               <div class="meta-item">
                 <mat-icon>tag</mat-icon>
@@ -49,11 +48,11 @@
               </div>
             </div>
           </div>
-          
+
           <div class="action-buttons">
             <!-- Primary Actions -->
-            <button 
-              mat-raised-button 
+            <button
+              mat-raised-button
               color="primary"
               (click)="contributeToDataset()"
               *ngIf="canContributeToDataset()"
@@ -61,50 +60,50 @@
               <mat-icon>add</mat-icon>
               Contribute
             </button>
-            
-            <button 
-              mat-raised-button 
+
+            <button
+              mat-raised-button
               color="accent"
               (click)="downloadDataset()"
             >
               <mat-icon>download</mat-icon>
               Download
             </button>
-            
+
             <!-- More Actions Menu -->
             <button mat-button [matMenuTriggerFor]="moreMenu">
               <mat-icon>more_vert</mat-icon>
               More
             </button>
-            
+
             <mat-menu #moreMenu="matMenu">
               <button mat-menu-item (click)="shareDataset()">
                 <mat-icon>share</mat-icon>
                 <span>Share</span>
               </button>
-              
-              <button 
-                mat-menu-item 
+
+              <button
+                mat-menu-item
                 (click)="editDataset()"
                 *ngIf="canEditDataset()"
               >
                 <mat-icon>edit</mat-icon>
                 <span>Edit</span>
               </button>
-              
-              <button 
-                mat-menu-item 
+
+              <button
+                mat-menu-item
                 (click)="createNewVersion()"
                 *ngIf="canEditDataset()"
               >
                 <mat-icon>new_releases</mat-icon>
                 <span>Create Version</span>
               </button>
-              
+
               <mat-divider *ngIf="canDeleteDataset()"></mat-divider>
-              
-              <button 
-                mat-menu-item 
+
+              <button
+                mat-menu-item
                 (click)="deleteDataset()"
                 *ngIf="canDeleteDataset()"
                 class="danger-action"
@@ -116,19 +115,19 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Description -->
       <div class="dataset-description" *ngIf="dataset.description">
         <p>{{ dataset.description }}</p>
       </div>
-      
+
       <!-- Tags -->
       <div class="dataset-tags" *ngIf="dataset.tags && dataset.tags.length > 0">
         <mat-chip-set>
           <mat-chip *ngFor="let tag of dataset.tags">{{ tag }}</mat-chip>
         </mat-chip-set>
       </div>
-      
+
       <!-- Real-time presence indicator -->
       <app-presence-indicator [datasetId]="dataset.id"></app-presence-indicator>
     </div>
@@ -141,36 +140,44 @@
             <mat-icon>list</mat-icon>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ stats.totalContributions | number }}</div>
+            <div class="stat-number">
+              {{ stats.totalContributions | number }}
+            </div>
             <div class="stat-label">Total Contributions</div>
           </div>
         </mat-card-content>
       </mat-card>
-      
+
       <mat-card class="stat-card">
         <mat-card-content>
           <div class="stat-icon validated">
             <mat-icon>verified</mat-icon>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ stats.validatedContributions | number }}</div>
+            <div class="stat-number">
+              {{ stats.validatedContributions | number }}
+            </div>
             <div class="stat-label">Validated</div>
           </div>
         </mat-card-content>
       </mat-card>
-      
+
       <mat-card class="stat-card">
         <mat-card-content>
           <div class="stat-icon pending">
-            <mat-icon [matBadge]="stats.pendingValidations" matBadgeColor="warn">pending</mat-icon>
+            <mat-icon [matBadge]="stats.pendingValidations" matBadgeColor="warn"
+              >pending</mat-icon
+            >
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ stats.pendingValidations | number }}</div>
+            <div class="stat-number">
+              {{ stats.pendingValidations | number }}
+            </div>
             <div class="stat-label">Pending Review</div>
           </div>
         </mat-card-content>
       </mat-card>
-      
+
       <mat-card class="stat-card">
         <mat-card-content>
           <div class="stat-icon completion">
@@ -187,27 +194,25 @@
     <!-- Main Content Tabs -->
     <mat-card class="content-card">
       <mat-tab-group (selectedTabChange)="onTabChange($event.index)">
-        
         <!-- Overview Tab -->
         <mat-tab label="Overview">
           <div class="tab-content">
             <div class="overview-grid">
-              
               <!-- Dataset Information -->
               <div class="info-section">
                 <h3>
                   <mat-icon>info</mat-icon>
                   Dataset Information
                 </h3>
-                
+
                 <div class="info-grid">
                   <div class="info-item">
                     <label>Created</label>
-                    <span>{{ dataset.createdAt | date:'medium' }}</span>
+                    <span>{{ dataset.created_at | date : "medium" }}</span>
                   </div>
                   <div class="info-item">
                     <label>Last Updated</label>
-                    <span>{{ dataset.updatedAt | date:'medium' }}</span>
+                    <span>{{ dataset.updated_at | date : "medium" }}</span>
                   </div>
                   <div class="info-item">
                     <label>Current Version</label>
@@ -223,46 +228,58 @@
                   </div>
                   <div class="info-item">
                     <label>Status</label>
-                    <span class="status-active" *ngIf="dataset.isActive">Active</span>
-                    <span class="status-inactive" *ngIf="!dataset.isActive">Inactive</span>
+                    <span class="status-active" *ngIf="dataset.isActive"
+                      >Active</span
+                    >
+                    <span class="status-inactive" *ngIf="!dataset.isActive"
+                      >Inactive</span
+                    >
                   </div>
                 </div>
               </div>
-              
+
               <!-- Progress Section -->
               <div class="progress-section" *ngIf="stats">
                 <h3>
                   <mat-icon>trending_up</mat-icon>
                   Progress & Quality
                 </h3>
-                
+
                 <div class="progress-item">
                   <label>Validation Progress</label>
                   <div class="progress-bar-container">
-                    <mat-progress-bar 
-                      mode="determinate" 
+                    <mat-progress-bar
+                      mode="determinate"
                       [value]="getCompletionPercentage()"
                       color="primary"
                     ></mat-progress-bar>
-                    <span class="progress-text">{{ getCompletionPercentage() }}%</span>
+                    <span class="progress-text"
+                      >{{ getCompletionPercentage() }}%</span
+                    >
                   </div>
                 </div>
-                
+
                 <div class="quality-metrics">
                   <div class="metric-item">
-                    <mat-icon class="metric-icon validated">check_circle</mat-icon>
-                    <span class="metric-value">{{ stats.validatedContributions }}</span>
+                    <mat-icon class="metric-icon validated"
+                      >check_circle</mat-icon
+                    >
+                    <span class="metric-value">{{
+                      stats.validatedContributions
+                    }}</span>
                     <span class="metric-label">Validated</span>
                   </div>
                   <div class="metric-item">
                     <mat-icon class="metric-icon pending">schedule</mat-icon>
-                    <span class="metric-value">{{ stats.pendingValidations }}</span>
+                    <span class="metric-value">{{
+                      stats.pendingValidations
+                    }}</span>
                     <span class="metric-label">Pending</span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <!-- Recent Activity -->
             <div class="activity-section">
               <h3>
@@ -276,12 +293,11 @@
             </div>
           </div>
         </mat-tab>
-        
+
         <!-- Statistics Tab -->
         <mat-tab label="Statistics">
           <div class="tab-content" *ngIf="stats">
             <div class="statistics-grid">
-              
               <!-- Contribution Statistics -->
               <mat-card class="stats-card">
                 <mat-card-header>
@@ -294,24 +310,32 @@
                   <div class="stats-list">
                     <div class="stat-row">
                       <span class="stat-name">Total Contributions</span>
-                      <span class="stat-value">{{ stats.totalContributions | number }}</span>
+                      <span class="stat-value">{{
+                        stats.totalContributions | number
+                      }}</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-name">Validated Contributions</span>
-                      <span class="stat-value validated">{{ stats.validatedContributions | number }}</span>
+                      <span class="stat-value validated">{{
+                        stats.validatedContributions | number
+                      }}</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-name">Pending Validation</span>
-                      <span class="stat-value pending">{{ stats.pendingValidations | number }}</span>
+                      <span class="stat-value pending">{{
+                        stats.pendingValidations | number
+                      }}</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-name">Validation Rate</span>
-                      <span class="stat-value">{{ getCompletionPercentage() }}%</span>
+                      <span class="stat-value"
+                        >{{ getCompletionPercentage() }}%</span
+                      >
                     </div>
                   </div>
                 </mat-card-content>
               </mat-card>
-              
+
               <!-- Version Information -->
               <mat-card class="stats-card">
                 <mat-card-header>
@@ -328,11 +352,15 @@
                     </div>
                     <div class="stat-row">
                       <span class="stat-name">Created</span>
-                      <span class="stat-value">{{ stats.createdAt | date:'short' }}</span>
+                      <span class="stat-value">{{
+                        stats.created_at | date : "short"
+                      }}</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-name">Last Updated</span>
-                      <span class="stat-value">{{ stats.lastUpdated | date:'short' }}</span>
+                      <span class="stat-value">{{
+                        stats.lastUpdated | date : "short"
+                      }}</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-name">Data Type</span>
@@ -341,7 +369,7 @@
                   </div>
                 </mat-card-content>
               </mat-card>
-              
+
               <!-- Data Quality Insights -->
               <mat-card class="stats-card full-width">
                 <mat-card-header>
@@ -360,7 +388,7 @@
             </div>
           </div>
         </mat-tab>
-        
+
         <!-- Version History Tab -->
         <mat-tab label="Version History">
           <div class="tab-content">
@@ -369,9 +397,9 @@
                 <mat-icon>history</mat-icon>
                 Version History
               </h3>
-              <button 
-                mat-raised-button 
-                color="primary" 
+              <button
+                mat-raised-button
+                color="primary"
                 (click)="createNewVersion()"
                 *ngIf="canEditDataset()"
               >
@@ -379,25 +407,32 @@
                 Create Version
               </button>
             </div>
-            
+
             <!-- Loading spinner for history -->
             <div class="history-loading" *ngIf="isLoadingHistory">
               <mat-spinner diameter="30"></mat-spinner>
               <p>Loading version history...</p>
             </div>
-            
+
             <!-- History list -->
             <div class="history-list" *ngIf="!isLoadingHistory">
-              <div class="history-item" *ngFor="let item of history; let first = first">
+              <div
+                class="history-item"
+                *ngFor="let item of history; let first = first"
+              >
                 <div class="history-icon" [class.current]="first">
-                  <mat-icon>{{ first ? 'label' : 'label_outline' }}</mat-icon>
+                  <mat-icon>{{ first ? "label" : "label_outline" }}</mat-icon>
                 </div>
                 <div class="history-content">
                   <div class="history-header">
                     <div class="history-title">
-                      <span class="version-label" *ngIf="first">Current Version</span>
+                      <span class="version-label" *ngIf="first"
+                        >Current Version</span
+                      >
                       <span class="version-label" *ngIf="!first">Version</span>
-                      <span class="version-date">{{ item.version | date:'medium' }}</span>
+                      <span class="version-date">{{
+                        item.version | date : "medium"
+                      }}</span>
                     </div>
                     <div class="history-stats">
                       <span class="stat-chip">
@@ -415,7 +450,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- No history message -->
               <div class="no-history" *ngIf="history.length === 0">
                 <mat-icon>history</mat-icon>
@@ -424,7 +459,280 @@
             </div>
           </div>
         </mat-tab>
-        
+
+        <mat-tab label="Contributions">
+          <div class="tab-content">
+            <div class="contributions-header">
+              <h3>
+                <mat-icon>list</mat-icon>
+                Dataset Contributions
+              </h3>
+
+              <!-- Filter and Actions -->
+              <div class="contributions-controls">
+                <mat-form-field appearance="outline" class="filter-field">
+                  <mat-label>Filter by Status</mat-label>
+                  <mat-select
+                    [(value)]="contributionsFilter"
+                    (selectionChange)="onContributionsFilterChange()"
+                  >
+                    <mat-option value="">All Contributions</mat-option>
+                    <mat-option value="pending">Pending Review</mat-option>
+                    <mat-option value="approved">Approved</mat-option>
+                    <mat-option value="rejected">Rejected</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <button
+                  mat-raised-button
+                  color="primary"
+                  (click)="contributeToDataset()"
+                  *ngIf="canContributeToDataset()"
+                >
+                  <mat-icon>add</mat-icon>
+                  Add Contribution
+                </button>
+              </div>
+            </div>
+
+            <!-- Loading spinner for contributions -->
+            <div class="contributions-loading" *ngIf="isLoadingContributions">
+              <mat-spinner diameter="30"></mat-spinner>
+              <p>Loading contributions...</p>
+            </div>
+
+            <!-- No contributions message -->
+            <div
+              class="no-contributions"
+              *ngIf="!isLoadingContributions && contributions.length === 0"
+            >
+              <mat-icon>add_circle_outline</mat-icon>
+              <h4>No contributions found</h4>
+              <p *ngIf="!contributionsFilter">
+                This dataset doesn't have any contributions yet.
+              </p>
+              <p *ngIf="contributionsFilter">
+                No contributions found with status: {{ contributionsFilter }}
+              </p>
+              <div
+                class="no-contributions-actions"
+                *ngIf="canContributeToDataset()"
+              >
+                <button
+                  mat-raised-button
+                  color="primary"
+                  (click)="contributeToDataset()"
+                >
+                  <mat-icon>add</mat-icon>
+                  Make First Contribution
+                </button>
+              </div>
+            </div>
+
+            <!-- Contributions grid -->
+            <div
+              class="contributions-grid"
+              *ngIf="!isLoadingContributions && contributions.length > 0"
+            >
+              <mat-card
+                class="contribution-card"
+                *ngFor="let contribution of contributions"
+              >
+                <mat-card-content>
+                  <div class="contribution-header">
+                    <div
+                      class="data-type-icon"
+                      [ngClass]="contribution.dataType"
+                    >
+                      <mat-icon>{{
+                        getContributionIcon(contribution.dataType)
+                      }}</mat-icon>
+                    </div>
+                    <div
+                      class="status-badge"
+                      [ngClass]="contribution.validationStatus"
+                    >
+                      <span>{{
+                        getContributionStatusLabel(contribution.validationStatus)
+                      }}</span>
+                    </div>
+                  </div>
+
+                  <div class="contribution-preview">
+                    <!-- Image preview -->
+                    <div
+                      *ngIf="
+                        contribution.dataType === 'image' &&
+                        contribution.content?.file
+                      "
+                      class="image-preview"
+                    >
+                      <img
+                        [src]="getContributionPreviewUrl(contribution)"
+                        [alt]="
+                          contribution.metadata?.description ||
+                          'Contribution preview'
+                        "
+                        (error)="onImageError($event)"
+                      />
+                    </div>
+
+                    <!-- Text preview -->
+                    <div
+                      *ngIf="contribution.dataType === 'text'"
+                      class="text-preview"
+                    >
+                      <mat-icon>text_fields</mat-icon>
+                      <p *ngIf="contribution.content?.text">
+                        {{ contribution.content.text | slice : 0 : 100 }}...
+                      </p>
+                      <p
+                        *ngIf="
+                          !contribution.content?.text &&
+                          contribution.content?.file
+                        "
+                      >
+                        📄 {{ contribution.content.file.originalName }}
+                      </p>
+                    </div>
+
+                    <!-- Structured data preview -->
+                    <div
+                      *ngIf="contribution.dataType === 'structured'"
+                      class="structured-preview"
+                    >
+                      <mat-icon>table_chart</mat-icon>
+                      <span *ngIf="contribution.content?.file">
+                        📊 {{ contribution.content.file.originalName }}
+                      </span>
+                      <span *ngIf="!contribution.content?.file">
+                        Structured data
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    class="contribution-description"
+                    *ngIf="contribution.metadata?.description"
+                  >
+                    <p>
+                      {{ contribution.metadata.description | slice : 0 : 120 }}
+                      <span
+                        *ngIf="contribution.metadata.description.length > 120"
+                        >...</span
+                      >
+                    </p>
+                  </div>
+
+                  <div
+                    class="contribution-tags"
+                    *ngIf="contribution.metadata?.tags?.length"
+                  >
+                    <mat-chip-set>
+                      <mat-chip
+                        *ngFor="
+                          let tag of contribution.metadata.tags.slice(0, 2)
+                        "
+                      >
+                        {{ tag }}
+                      </mat-chip>
+                      <mat-chip
+                        *ngIf="contribution.metadata.tags.length > 2"
+                        class="more-tags"
+                      >
+                        +{{ contribution.metadata.tags.length - 2 }}
+                      </mat-chip>
+                    </mat-chip-set>
+                  </div>
+
+                  <div class="contribution-meta">
+                    <div class="meta-item">
+                      <mat-icon>person</mat-icon>
+                      <span>{{
+                        contribution.contributor?.username || "Unknown"
+                      }}</span>
+                    </div>
+                    <div class="meta-item">
+                      <mat-icon>schedule</mat-icon>
+                      <span>{{ contribution.created_at | date : "short" }}</span>
+                    </div>
+                    <div class="meta-item" *ngIf="contribution.qualityScore">
+                      <mat-icon>star</mat-icon>
+                      <span
+                        >{{
+                          contribution.qualityScore * 100 | number : "1.0-0"
+                        }}%</span
+                      >
+                    </div>
+                  </div>
+
+                  <div
+                    class="validation-info"
+                    *ngIf="contribution.validationStatus !== 'pending'"
+                  >
+                    <div
+                      class="validation-count"
+                      *ngIf="contribution.validatedBy?.length"
+                    >
+                      <mat-icon>people</mat-icon>
+                      <span
+                        >{{
+                          contribution.validatedBy.length
+                        }}
+                        validator(s)</span
+                      >
+                    </div>
+                    <div
+                      class="validation-notes"
+                      *ngIf="contribution.validationNotes"
+                    >
+                      <mat-icon>comment</mat-icon>
+                      <span
+                        >{{ contribution.validationNotes | slice : 0 : 80 }}
+                        <span *ngIf="contribution.validationNotes.length > 80"
+                          >...</span
+                        >
+                      </span>
+                    </div>
+                  </div>
+                </mat-card-content>
+
+                <mat-card-actions align="end">
+                  <button
+                    mat-button
+                    [routerLink]="['/contributions', contribution.id]"
+                  >
+                    View Details
+                  </button>
+                  <button
+                    mat-button
+                    color="primary"
+                    [routerLink]="['/validate']"
+                    *ngIf="
+                      contribution.validationStatus === 'pending' &&
+                      authService.isAuthenticated()
+                    "
+                  >
+                    Validate
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            </div>
+
+            <!-- Contributions pagination -->
+            <mat-paginator
+              *ngIf="!isLoadingContributions && contributionsTotalItems > 0"
+              [length]="contributionsTotalItems"
+              [pageSize]="contributionsPageSize"
+              [pageSizeOptions]="[6, 12, 24, 48]"
+              [pageIndex]="contributionsPage - 1"
+              (page)="onContributionsPageChange($event)"
+              aria-label="Select page of contributions"
+              showFirstLastButtons
+            >
+            </mat-paginator>
+          </div>
+        </mat-tab>
       </mat-tab-group>
     </mat-card>
   </div>

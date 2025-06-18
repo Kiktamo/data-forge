@@ -48,8 +48,8 @@ export class DatasetService {
         // Convert date strings to Date objects
         response.data.datasets = response.data.datasets.map(dataset => ({
           ...dataset,
-          createdAt: new Date(dataset.createdAt),
-          updatedAt: new Date(dataset.updatedAt)
+          created_at: new Date(dataset.createdAt),
+          updated_at: new Date(dataset.updatedAt)
         }));
         return response;
       })
@@ -63,8 +63,8 @@ export class DatasetService {
         const dataset = response.data.dataset;
         return {
           ...dataset,
-          createdAt: new Date(dataset.createdAt),
-          updatedAt: new Date(dataset.updatedAt)
+          created_at: new Date(dataset.createdAt),
+          updated_at: new Date(dataset.updatedAt)
         };
       })
     );
@@ -92,8 +92,8 @@ export class DatasetService {
       map(response => {
         response.data.datasets = response.data.datasets.map(dataset => ({
           ...dataset,
-          createdAt: new Date(dataset.createdAt),
-          updatedAt: new Date(dataset.updatedAt)
+          created_at: new Date(dataset.created_at),
+          updated_at: new Date(dataset.updated_at)
         }));
         return response;
       })
@@ -107,8 +107,8 @@ export class DatasetService {
         const dataset = response.data.dataset;
         return {
           ...dataset,
-          createdAt: new Date(dataset.createdAt),
-          updatedAt: new Date(dataset.updatedAt)
+          created_at: new Date(dataset.created_at),
+          updated_at: new Date(dataset.updated_at)
         };
       })
     );
@@ -121,8 +121,8 @@ export class DatasetService {
         const dataset = response.data.dataset;
         return {
           ...dataset,
-          createdAt: new Date(dataset.createdAt),
-          updatedAt: new Date(dataset.updatedAt)
+          created_at: new Date(dataset.created_at),
+          updated_at: new Date(dataset.updated_at)
         };
       })
     );
@@ -140,7 +140,7 @@ export class DatasetService {
     return this.http.get<DatasetStatsResponse>(`${this.apiUrl}/${id}/stats`).pipe(
       map(response => ({
         ...response.data.stats,
-        createdAt: new Date(response.data.stats.createdAt),
+        created_at: new Date(response.data.stats.created_at),
         lastUpdated: new Date(response.data.stats.lastUpdated)
       }))
     );
@@ -163,8 +163,8 @@ export class DatasetService {
       map(response => {
         response.data.history = response.data.history.map(version => ({
           ...version,
-          createdAt: new Date(version.createdAt),
-          updatedAt: new Date(version.updatedAt),
+          created_at: new Date(version.created_at),
+          updated_at: new Date(version.updated_at),
           version: new Date(version.version)
         }));
         return response;

@@ -66,7 +66,7 @@ export class DatasetListComponent implements OnInit, OnDestroy {
   // Filters
   searchQuery = '';
   selectedDataType: '' | 'image' | 'text' | 'structured' = '';
-  selectedSortBy = 'updatedAt-DESC';
+  selectedSortBy = 'updated_at-DESC';
   selectedSortOrder = 'DESC';
   selectedVisibility: '' | 'public' | 'private' | 'collaborative' = '';
   
@@ -79,9 +79,9 @@ export class DatasetListComponent implements OnInit, OnDestroy {
   ];
   
   sortOptions = [
-    { value: 'updatedAt-DESC', label: 'Recently Updated' },
-    { value: 'createdAt-DESC', label: 'Newest First' },
-    { value: 'createdAt-ASC', label: 'Oldest First' },
+    { value: 'updated_at-DESC', label: 'Recently Updated' },
+    { value: 'created_at-DESC', label: 'Newest First' },
+    { value: 'created_at-ASC', label: 'Oldest First' },
     { value: 'name-ASC', label: 'Name (A-Z)' },
     { value: 'name-DESC', label: 'Name (Z-A)' },
     { value: 'contributionCount-DESC', label: 'Most Contributions' }
@@ -199,7 +199,7 @@ export class DatasetListComponent implements OnInit, OnDestroy {
   resetFilters(): void {
     this.searchQuery = '';
     this.selectedDataType = '';
-    this.selectedSortBy = 'updatedAt-DESC';
+    this.selectedSortBy = 'updated_at-DESC';
     this.selectedSortOrder = 'DESC';
     this.selectedVisibility = '';
     this.currentPage = 1;
@@ -209,7 +209,7 @@ export class DatasetListComponent implements OnInit, OnDestroy {
   // Check if filters are applied
   get hasActiveFilters(): boolean {
     return !!(this.searchQuery || this.selectedDataType || this.selectedVisibility || 
-             this.selectedSortBy !== 'updatedAt-DESC' || this.selectedSortOrder !== 'DESC');
+             this.selectedSortBy !== 'updated_at-DESC' || this.selectedSortOrder !== 'DESC');
   }
   
   // Get display name for dataset owner

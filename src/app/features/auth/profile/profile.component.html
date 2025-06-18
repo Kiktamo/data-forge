@@ -29,7 +29,7 @@
         <p class="email">{{ user.email }}</p>
         <div class="user-metadata">
           <span class="metadata-item">
-            <mat-icon>event</mat-icon> Joined {{ user.createdAt | date }}
+            <mat-icon>event</mat-icon> Joined {{ user.created_at | date }}
           </span>
           <span class="metadata-item" [class.verified]="user.emailVerified">
             <mat-icon>{{ user.emailVerified ? 'verified' : 'error' }}</mat-icon>

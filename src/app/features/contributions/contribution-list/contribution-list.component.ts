@@ -90,7 +90,7 @@ export class ContributionListComponent implements OnInit, OnDestroy {
     const params: ContributionQueryParams = {
       page: this.currentPage,
       limit: this.pageSize,
-      sortBy: 'createdAt',
+      sortBy: 'created_at',
       sortOrder: 'DESC'
     };
     

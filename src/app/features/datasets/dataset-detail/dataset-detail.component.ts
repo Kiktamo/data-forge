@@ -16,19 +16,25 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
 
 import { Dataset } from '../../../core/models/dataset.model';
 import { DatasetService } from '../../../core/services/dataset.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { WebSocketService } from '../../../core/services/web-socket.service';
 import { PresenceIndicatorComponent } from '../../../core/components/presence-indicator/presence-indicator.component';
+import { Contribution } from '../../../core/models/contribution.model';
+import { ContributionService } from '../../../core/services/contribution.service';
+
 
 interface DatasetStats {
   totalContributions: number;
   validatedContributions: number;
   pendingValidations: number;
   currentVersion: string;
-  createdAt: Date;
+  created_at: Date;
   lastUpdated: Date;
   tags: string[];
   dataType: string;
@@ -42,8 +48,8 @@ interface DatasetHistoryItem {
   description?: string;
   contributionCount: number;
   validationCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 @Component({
@@ -65,7 +71,11 @@ interface DatasetHistoryItem {
     MatDialogModule,
     MatProgressBarModule,
     MatBadgeModule,
-    PresenceIndicatorComponent
+    PresenceIndicatorComponent,
+    MatPaginatorModule,
+    MatSelectModule,
+    MatFormFieldModule,
+    
   ],
   templateUrl: './dataset-detail.component.html',
   styleUrls: ['./dataset-detail.component.scss']
@@ -90,6 +100,14 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
   historyPage = 1;
   historyPageSize = 10;
   historyTotalItems = 0;
+
+  // NEW: Contributions data
+  contributions: Contribution[] = [];
+  contributionsPage = 1;
+  contributionsPageSize = 12;
+  contributionsTotalItems = 0;
+  isLoadingContributions = false;
+  contributionsFilter: 'pending' | 'approved' | 'rejected' = 'pending';
   
   constructor(
     private route: ActivatedRoute,
@@ -98,7 +116,8 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
     public authService: AuthService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private wsService: WebSocketService
+    private wsService: WebSocketService,
+    private contributionService: ContributionService
   ) {}
   
   ngOnInit(): void {
@@ -219,6 +238,11 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
     // Load history when history tab is selected
     if (index === 2 && this.history.length === 0) {
       this.loadHistory();
+    }
+    
+    // NEW: Load contributions when contributions tab is selected
+    if (index === 3 && this.contributions.length === 0) {
+      this.loadContributions();
     }
   }
   
@@ -411,4 +435,87 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
       duration: 3000
     });
   }
+
+   // Load contributions for this dataset
+  loadContributions(page: number = 1): void {
+    if (!this.dataset) return;
+    
+    this.isLoadingContributions = true;
+    
+    const params: any = {
+      page,
+      limit: this.contributionsPageSize,
+      sortBy: 'created_at',
+      sortOrder: 'DESC' as const
+    };
+    
+    // Only add status if it's not empty
+    if (this.contributionsFilter) {
+      params.status = this.contributionsFilter;
+    }
+    
+    this.contributionService.getContributionsByDataset(this.dataset.id, params).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        this.contributions = response.data.contributions;
+        this.contributionsPage = response.data.pagination.currentPage;
+        this.contributionsTotalItems = response.data.pagination.totalItems;
+        this.isLoadingContributions = false;
+      },
+      error: (error) => {
+        console.error('Error loading contributions:', error);
+        this.isLoadingContributions = false;
+        this.snackBar.open('Failed to load contributions', 'Close', {
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  // Handle contributions filter change
+  onContributionsFilterChange(): void {
+    this.contributionsPage = 1;
+    this.loadContributions();
+  }
+
+  // Handle contributions page change
+  onContributionsPageChange(event: any): void {
+    this.contributionsPage = event.pageIndex + 1;
+    this.contributionsPageSize = event.pageSize;
+    this.loadContributions(this.contributionsPage);
+  }
+
+  // Get contribution preview URL
+  getContributionPreviewUrl(contribution: any): string {
+    return this.contributionService.getContributionFileUrl(contribution) || '';
+  }
+
+  // Get contribution icon
+  getContributionIcon(dataType: string): string {
+    switch (dataType) {
+      case 'image': return 'image';
+      case 'text': return 'text_fields';
+      case 'structured': return 'table_chart';
+      default: return 'dataset';
+    }
+  }
+
+  // Get status label for contributions
+  getContributionStatusLabel(status: string): string {
+    switch (status) {
+      case 'pending': return 'Pending Review';
+      case 'approved': return 'Approved';
+      case 'rejected': return 'Rejected';
+      default: return 'Unknown';
+    }
+  }
+
+    // Handle image error
+  onImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'https://placehold.co/300x200?text=Image+Not+Found';
+  }
+  
 }

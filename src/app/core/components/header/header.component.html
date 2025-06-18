@@ -12,6 +12,11 @@
     <nav class="desktop-nav">
       <a mat-button routerLink="/datasets" routerLinkActive="active">Datasets</a>
       <a mat-button routerLink="/explore" routerLinkActive="active">Explore</a>
+      <!-- ADD VALIDATION QUEUE LINK -->
+      <a mat-button routerLink="/validate" routerLinkActive="active" *ngIf="authService.isAuthenticated()">
+        <mat-icon>fact_check</mat-icon>
+        Validate
+      </a>
       <a mat-button routerLink="/docs" routerLinkActive="active">Documentation</a>
     </nav>
     
@@ -41,6 +46,11 @@
           <a mat-menu-item routerLink="/contributions">
             <mat-icon>history</mat-icon>
             <span>My Contributions</span>
+          </a>
+          <!-- ADD VALIDATION QUEUE TO USER MENU TOO -->
+          <a mat-menu-item routerLink="/validate">
+            <mat-icon>fact_check</mat-icon>
+            <span>Validation Queue</span>
           </a>
           <button mat-menu-item (click)="logout()">
             <mat-icon>exit_to_app</mat-icon>
@@ -72,6 +82,11 @@
   <nav class="mobile-nav-links">
     <a routerLink="/datasets" routerLinkActive="active" (click)="toggleMenu()">Datasets</a>
     <a routerLink="/explore" routerLinkActive="active" (click)="toggleMenu()">Explore</a>
+    <!-- ADD VALIDATION TO MOBILE NAV -->
+    <a routerLink="/validate" routerLinkActive="active" (click)="toggleMenu()" *ngIf="authService.isAuthenticated()">
+      <mat-icon>fact_check</mat-icon>
+      Validation Queue
+    </a>
     <a routerLink="/docs" routerLinkActive="active" (click)="toggleMenu()">Documentation</a>
     
     <!-- Auth links -->
@@ -92,6 +107,7 @@
         <a routerLink="/auth/profile" (click)="toggleMenu()">Profile</a>
         <a routerLink="/datasets/my" (click)="toggleMenu()">My Datasets</a>
         <a routerLink="/contributions" (click)="toggleMenu()">My Contributions</a>
+        <a routerLink="/validate" (click)="toggleMenu()">Validation Queue</a>
         <a routerLink="/datasets/new" (click)="toggleMenu()">New Dataset</a>
         <button class="logout-button" (click)="logout()">Log Out</button>
       </ng-container>

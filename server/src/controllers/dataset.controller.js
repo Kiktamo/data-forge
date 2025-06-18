@@ -326,7 +326,7 @@ exports.getUserDatasets = async (req, res) => {
       visibility,
       dataType,
       search,
-      sortBy = 'updatedAt',
+      sortBy = 'updated_at',
       sortOrder = 'DESC'
     } = req.query;
 
@@ -523,6 +523,8 @@ exports.getDatasetHistory = async (req, res) => {
     const transformedHistory = history.map(record => {
       // Handle both Sequelize model instances and raw SQL results
       const data = record.dataValues || record;
+
+      console.log('Transformed history record:', data);
       
       return {
         id: data.hid || data.id,
@@ -538,9 +540,9 @@ exports.getDatasetHistory = async (req, res) => {
         contributionCount: data.contributionCount || data.contribution_count || 0,
         validationCount: data.validationCount || data.validation_count || 0,
         isActive: data.isActive !== undefined ? data.isActive : (data.is_active !== undefined ? data.is_active : true),
-        createdAt: data.createdAt || data.created_at,
-        updatedAt: data.updatedAt || data.updated_at,
-        archivedAt: data.archivedAt || data.archived_at,
+        created_at: data.createdAt,
+        updated_at: data.updatedAt,
+        archived_at: data.archivedAt,
         owner: record.owner || null
       };
     });
@@ -685,8 +687,8 @@ exports.getDatasetStats = async (req, res) => {
       validatedContributions: dataset.validationCount,
       pendingValidations: dataset.contributionCount - dataset.validationCount,
       currentVersion: dataset.currentVersion,
-      createdAt: dataset.createdAt,
-      lastUpdated: dataset.updatedAt,
+      created_at: dataset.createdAt || dataset.created_at,
+      lastUpdated: dataset.updatedAt || dataset.updated_at,
       tags: dataset.tags,
       dataType: dataset.dataType
     };

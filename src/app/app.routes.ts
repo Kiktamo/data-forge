@@ -57,18 +57,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/contributions/contribution-list/contribution-list.component').then(m => m.ContributionListComponent),
         canActivate: [AuthGuard]
       },
-      // {
-      //   path: ':id',
-      //   loadComponent: () => import('./features/contributions/contribution-detail/contribution-detail.component').then(m => m.ContributionDetailComponent),
-      //   canActivate: [AuthGuard]
-      // }
+      {
+        path: ':id',
+        loadComponent: () => import('./features/contributions/contribution-detail/contribution-detail.component').then(m => m.ContributionDetailComponent),
+        canActivate: [AuthGuard]
+      }
     ]
   },
-  // {
-  //   path: 'validate',
-  //   loadComponent: () => import('./features/validation/validation-queue/validation-queue.component').then(m => m.ValidationQueueComponent),
-  //   canActivate: [AuthGuard]
-  // },
+  {
+    path: 'validate',
+    loadComponent: () => import('./features/validation/validation-queue/validation-queue.component').then(m => m.ValidationQueueComponent),
+    canActivate: [AuthGuard]
+  },
   // { 
   //   path: 'explore', 
   //   loadComponent: () => import('./features/explore/explore.component').then(m => m.ExploreComponent) 

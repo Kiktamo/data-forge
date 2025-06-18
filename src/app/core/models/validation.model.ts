@@ -4,5 +4,5 @@ export interface Validation {
     validatorId: string;
     status: 'approved' | 'rejected';
     comment?: string;
-    createdAt: Date;
+    created_at: Date;
   }

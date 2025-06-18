@@ -80,7 +80,7 @@ const Contribution = sequelize.define('Contribution', {
 }, {
   tableName: 'contributions',
   timestamps: true,
-  underscored: false,
+  underscored: true,
   indexes: [
     {
       fields: ['dataset_id']
@@ -95,7 +95,7 @@ const Contribution = sequelize.define('Contribution', {
       fields: ['data_type']
     },
     {
-      fields: ['createdAt']
+      fields: ['created_at']
     }
   ]
 });
@@ -105,13 +105,13 @@ Contribution.prototype.toSafeObject = function() {
   const {
     id, datasetId, contributorId, dataType, content, metadata,
     validationStatus, validatedBy, validationNotes, qualityScore,
-    isActive, createdAt, updatedAt
+    isActive, created_at, updated_at
   } = this;
   
   return {
     id, datasetId, contributorId, dataType, content, metadata,
     validationStatus, validatedBy, validationNotes, qualityScore,
-    isActive, createdAt, updatedAt
+    isActive, created_at, updated_at
   };
 };
 
@@ -126,7 +126,7 @@ Contribution.getWithContributor = async function(whereClause = {}) {
       as: 'contributor',
       attributes: ['id', 'username', 'fullName']
     }],
-    order: [['createdAt', 'DESC']]
+    order: [['created_at', 'DESC']]
   });
 };
 
@@ -137,7 +137,7 @@ Contribution.getForDataset = async function(datasetId, options = {}) {
     limit = 20,
     status,
     contributorId,
-    sortBy = 'createdAt',
+    sortBy = 'created_at',
     sortOrder = 'DESC'
   } = options;
   

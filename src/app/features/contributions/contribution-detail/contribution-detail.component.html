@@ -1,0 +1,305 @@
+    <div class="contribution-detail-container">
+      <!-- Loading spinner -->
+      <div class="loading-container" *ngIf="isLoading">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading contribution details...</p>
+      </div>
+
+      <!-- Contribution content -->
+      <div *ngIf="!isLoading && contribution" class="contribution-content">
+        
+        <!-- Header Section -->
+        <div class="contribution-header">
+          <div class="header-main">
+            <div class="back-navigation">
+              <button 
+                mat-icon-button 
+                (click)="goBack()" 
+                matTooltip="Back"
+              >
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+            </div>
+            
+            <div class="contribution-info">
+              <div class="title-section">
+                <div class="data-type-badge" [ngClass]="contribution.dataType">
+                  <mat-icon>{{ getDataTypeIcon() }}</mat-icon>
+                  <span>{{ getDataTypeLabel() }}</span>
+                </div>
+                
+                <h1 class="contribution-title">
+                  Contribution to 
+                  <a [routerLink]="['/datasets', contribution.datasetId]">
+                    {{ contribution.dataset?.name || 'Dataset' }}
+                  </a>
+                </h1>
+                
+                <div class="contribution-meta">
+                  <div class="meta-item">
+                    <mat-icon>person</mat-icon>
+                    <span>{{ getContributorName() }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <mat-icon>schedule</mat-icon>
+                    <span>{{ contribution.created_at | date:'medium' }}</span>
+                  </div>
+                  <div class="meta-item" [ngClass]="contribution.validationStatus">
+                    <mat-icon>{{ getStatusIcon() }}</mat-icon>
+                    <span>{{ getStatusLabel() }}</span>
+                  </div>
+                  <div class="meta-item" *ngIf="contribution.qualityScore">
+                    <mat-icon>star</mat-icon>
+                    <span>{{ (contribution.qualityScore * 100) | number:'1.0-0' }}% quality</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="action-buttons" *ngIf="canEditContribution()">
+                <button 
+                  mat-raised-button 
+                  color="accent"
+                  (click)="editContribution()"
+                >
+                  <mat-icon>edit</mat-icon>
+                  Edit
+                </button>
+                
+                <button mat-button [matMenuTriggerFor]="moreMenu">
+                  <mat-icon>more_vert</mat-icon>
+                  More
+                </button>
+                
+                <mat-menu #moreMenu="matMenu">
+                  <button 
+                    mat-menu-item 
+                    (click)="deleteContribution()"
+                    class="danger-action"
+                  >
+                    <mat-icon>delete</mat-icon>
+                    <span>Delete</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <mat-card class="content-card">
+          <mat-tab-group>
+            
+            <!-- Content Tab -->
+            <mat-tab label="Content">
+              <div class="tab-content">
+                
+                <!-- Image Content -->
+                <div *ngIf="contribution.dataType === 'image'" class="image-content">
+                  <div class="image-display" *ngIf="contribution.content?.file">
+                    <img 
+                      [src]="getImageUrl()" 
+                      [alt]="contribution.metadata?.description || 'Contribution image'"
+                      (error)="onImageError($event)"
+                    >
+                  </div>
+                  <div class="image-info" *ngIf="contribution.content?.file">
+                    <div class="info-grid">
+                      <div class="info-item">
+                        <label>Filename</label>
+                        <span>{{ contribution.content.file.originalName }}</span>
+                      </div>
+                      <div class="info-item">
+                        <label>File Size</label>
+                        <span>{{ formatFileSize(contribution.content.file.size) }}</span>
+                      </div>
+                      <div class="info-item">
+                        <label>MIME Type</label>
+                        <span>{{ contribution.content.file.mimeType }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Text Content -->
+                <div *ngIf="contribution.dataType === 'text'" class="text-content">
+                  <div class="text-display" *ngIf="contribution.content?.text">
+                    <h3>Text Content</h3>
+                    <div class="text-body">{{ contribution.content.text }}</div>
+                  </div>
+                  <div class="text-file" *ngIf="contribution.content?.file && !contribution.content?.text">
+                    <h3>Text File</h3>
+                    <div class="file-info">
+                      <mat-icon>description</mat-icon>
+                      <span>{{ contribution.content.file.originalName }}</span>
+                      <button mat-button color="primary" (click)="downloadFile()">
+                        <mat-icon>download</mat-icon>
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Structured Content -->
+                <div *ngIf="contribution.dataType === 'structured'" class="structured-content">
+                  <div class="structured-display" *ngIf="contribution.content?.data">
+                    <h3>Structured Data</h3>
+                    <pre class="json-preview">{{ contribution.content.data | json }}</pre>
+                  </div>
+                  <div class="structured-file" *ngIf="contribution.content?.file">
+                    <h3>Data File</h3>
+                    <div class="file-info">
+                      <mat-icon>table_chart</mat-icon>
+                      <span>{{ contribution.content.file.originalName }}</span>
+                      <button mat-button color="primary" (click)="downloadFile()">
+                        <mat-icon>download</mat-icon>
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Description -->
+                <div class="description-section" *ngIf="contribution.metadata?.description">
+                  <h3>Description</h3>
+                  <p>{{ contribution.metadata.description }}</p>
+                </div>
+
+                <!-- Tags -->
+                <div class="tags-section" *ngIf="contribution.metadata?.tags?.length">
+                  <h3>Tags</h3>
+                  <mat-chip-set>
+                    <mat-chip *ngFor="let tag of contribution.metadata.tags">
+                      {{ tag }}
+                    </mat-chip>
+                  </mat-chip-set>
+                </div>
+              </div>
+            </mat-tab>
+
+            <!-- Validation Tab -->
+            <mat-tab label="Validation">
+              <div class="tab-content">
+                
+                <!-- Validation Status -->
+                <div class="validation-status">
+                  <h3>Validation Status</h3>
+                  <div class="status-display" [ngClass]="contribution.validationStatus">
+                    <mat-icon>{{ getStatusIcon() }}</mat-icon>
+                    <span class="status-text">{{ getStatusLabel() }}</span>
+                  </div>
+                </div>
+
+                <!-- Validation Details -->
+                <div class="validation-details" *ngIf="contribution.validationStatus !== 'pending'">
+                  
+                  <!-- Validators -->
+                  <div class="validators-section" *ngIf="contribution.validatedBy?.length">
+                    <h4>Validated By</h4>
+                    <div class="validators-list">
+                      <div class="validator-item" *ngFor="let validatorId of contribution.validatedBy">
+                        <mat-icon>person</mat-icon>
+                        <span>Validator {{ validatorId }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Quality Score -->
+                  <div class="quality-section" *ngIf="contribution.qualityScore">
+                    <h4>Quality Score</h4>
+                    <div class="quality-display">
+                      <div class="score-bar">
+                        <div 
+                          class="score-fill" 
+                          [style.width.%]="contribution.qualityScore * 100"
+                        ></div>
+                      </div>
+                      <span class="score-text">{{ (contribution.qualityScore * 100) | number:'1.0-0' }}%</span>
+                    </div>
+                  </div>
+
+                  <!-- Validation Notes -->
+                  <div class="notes-section" *ngIf="contribution.validationNotes">
+                    <h4>Validation Notes</h4>
+                    <div class="notes-content">
+                      <p>{{ contribution.validationNotes }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Pending Validation -->
+                <div class="pending-validation" *ngIf="contribution.validationStatus === 'pending'">
+                  <div class="pending-message">
+                    <mat-icon>schedule</mat-icon>
+                    <h4>Awaiting Validation</h4>
+                    <p>This contribution is pending review by validators.</p>
+                  </div>
+                </div>
+              </div>
+            </mat-tab>
+
+            <!-- Metadata Tab -->
+            <mat-tab label="Metadata">
+              <div class="tab-content">
+                
+                <!-- Contribution Metadata -->
+                <div class="metadata-section">
+                  <h3>Contribution Information</h3>
+                  <div class="metadata-grid">
+                    <div class="metadata-item">
+                      <label>Contribution ID</label>
+                      <span>{{ contribution.id }}</span>
+                    </div>
+                    <div class="metadata-item">
+                      <label>Created</label>
+                      <span>{{ contribution.created_at | date:'full' }}</span>
+                    </div>
+                    <div class="metadata-item">
+                      <label>Updated</label>
+                      <span>{{ contribution.updated_at | date:'full' }}</span>
+                    </div>
+                    <div class="metadata-item">
+                      <label>Data Type</label>
+                      <span>{{ getDataTypeLabel() }}</span>
+                    </div>
+                    <div class="metadata-item">
+                      <label>Contributor</label>
+                      <span>{{ getContributorName() }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Dataset Information -->
+                <div class="dataset-info-section">
+                  <h3>Dataset Information</h3>
+                  <div class="dataset-card" *ngIf="contribution.dataset">
+                    <div class="dataset-header">
+                      <mat-icon>dataset</mat-icon>
+                      <a [routerLink]="['/datasets', contribution.datasetId]">
+                        {{ contribution.dataset.name }}
+                      </a>
+                    </div>
+                    <p *ngIf="contribution.dataset.description">
+                      {{ contribution.dataset.description }}
+                    </p>
+                    <p *ngIf="!contribution.dataset.description" class="no-description">
+                      No description available
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Raw Metadata -->
+                <mat-expansion-panel class="raw-metadata">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <mat-icon>code</mat-icon>
+                      Raw Metadata
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
+                  <pre class="metadata-json">{{ contribution.metadata | json }}</pre>
+                </mat-expansion-panel>
+              </div>
+            </mat-tab>
+          </mat-tab-group>
+        </mat-card>
+      </div>
+    </div>

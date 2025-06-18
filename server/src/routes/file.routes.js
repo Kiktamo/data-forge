@@ -232,7 +232,7 @@ router.get('/contributions/:type/:filename/info',
           type,
           contribution: {
             id: contribution.id,
-            createdAt: contribution.createdAt,
+            created_at: contribution.created_at,
             validationStatus: contribution.validationStatus,
             contributor: contribution.contributor
           },

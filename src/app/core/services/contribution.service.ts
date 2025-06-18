@@ -46,8 +46,8 @@ export interface Validation {
   notes?: string;
   validationCriteria?: any;
   timeSpent?: number;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
   validator?: {
     id: number;
     username: string;
@@ -61,7 +61,8 @@ export interface ContributionQueryParams {
   status?: 'pending' | 'approved' | 'rejected';
   contributorId?: number;
   datasetId?: number;
-  sortBy?: 'createdAt' | 'updatedAt' | 'validationStatus';
+  dataType?: 'image' | 'text' | 'structured';
+  sortBy?: 'created_at' | 'updated_at' | 'validationStatus' | 'dataType';
   sortOrder?: 'ASC' | 'DESC';
 }
 
@@ -103,16 +104,56 @@ export class ContributionService {
     return this.http.get<ContributionListResponse>(`${this.apiUrl}/users/${userId}/contributions`, { params: params as any });
   }
   
-  // Validation methods
-  createValidation(contributionId: number, validation: {
-    status: 'approved' | 'rejected' | 'needs_review';
-    confidence?: number;
-    notes?: string;
-    validationCriteria?: any;
-    timeSpent?: number;
-  }): Observable<{ success: boolean; data: { validation: Validation }; message?: string }> {
-    return this.http.post<any>(`${this.apiUrl}/contributions/${contributionId}/validations`, validation);
+// Validation methods
+createValidation(contributionId: number, validation: {
+  status: 'approved' | 'rejected' | 'needs_review';
+  confidence?: number;
+  notes?: string;
+  validationCriteria?: any; // Will be converted to JSON string
+  timeSpent?: number;
+}): Observable<{ success: boolean; data: { validation: Validation }; message?: string }> {
+  
+  // Debug logging
+  console.log('ContributionService.createValidation called with:');
+  console.log('Contribution ID:', contributionId);
+  console.log('Raw validation data:', validation);
+  
+  // Convert validationCriteria to JSON string if it's an object
+  let processedValidation = { ...validation };
+  
+  if (validation.validationCriteria && typeof validation.validationCriteria === 'object') {
+    processedValidation.validationCriteria = JSON.stringify(validation.validationCriteria);
+  } else if (validation.validationCriteria && typeof validation.validationCriteria === 'string') {
+    // Already a string, keep as is
+    processedValidation.validationCriteria = validation.validationCriteria;
+  } else {
+    // Provide default empty JSON object
+    processedValidation.validationCriteria = '{}';
   }
+  
+  // Ensure confidence is a proper number
+  if (processedValidation.confidence !== undefined) {
+    processedValidation.confidence = Number(processedValidation.confidence);
+  }
+  
+  // Ensure timeSpent is a proper number
+  if (processedValidation.timeSpent !== undefined) {
+    processedValidation.timeSpent = Number(processedValidation.timeSpent);
+  }
+  
+  // Ensure notes is a string
+  if (processedValidation.notes === undefined || processedValidation.notes === null) {
+    processedValidation.notes = '';
+  }
+  
+  console.log('Processed validation data:', processedValidation);
+  console.log('Making request to:', `${this.apiUrl}/contributions/${contributionId}/validations`);
+  
+  return this.http.post<any>(
+    `${this.apiUrl}/contributions/${contributionId}/validations`, 
+    processedValidation
+  );
+}
   
   // Get validations for a contribution
   getValidationsForContribution(contributionId: number): Observable<{ success: boolean; data: ValidationSummary }> {
@@ -136,26 +177,24 @@ export class ContributionService {
   }
   
   // Get file URL for contribution files
-  getContributionFileUrl(contribution: Contribution): string | null {
-    if (!contribution.content?.file?.filename) {
-      return null;
-    }
-    
-    const type = contribution.dataType === 'image' ? 'images' :
-                 contribution.dataType === 'text' ? 'text' : 'structured';
-    
-    // For public/collaborative datasets, no token needed
-    // For private datasets, token will be handled by browser's auth headers
-    const baseUrl = `${environment.apiUrl}/files/contributions/${type}/${contribution.content.file.filename}`;
-    
-    // Add token for authenticated requests if available
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      return `${baseUrl}?token=${encodeURIComponent(token)}`;
-    }
-    
-    return baseUrl;
+getContributionFileUrl(contribution: Contribution): string | null {
+  if (!contribution.content?.file?.filename) {
+    return null;
   }
+  
+  const type = contribution.dataType === 'image' ? 'images' :
+               contribution.dataType === 'text' ? 'text' : 'structured';
+  
+  const baseUrl = `${environment.apiUrl}/files/contributions/${type}/${contribution.content.file.filename}`;
+  
+  // Add token for authenticated requests if available
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    return `${baseUrl}?token=${encodeURIComponent(token)}`;
+  }
+  
+  return baseUrl;
+}
   
   // Get thumbnail URL for image contributions
   getContributionThumbnailUrl(contribution: Contribution): string | null {

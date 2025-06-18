@@ -12,6 +12,8 @@ export interface Dataset {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
   // Owner information (from join)
   owner?: {
     id: number;
@@ -51,7 +53,7 @@ export interface DatasetStatsResponse {
       validatedContributions: number;
       pendingValidations: number;
       currentVersion: string;
-      createdAt: Date;
+      created_at: Date;
       lastUpdated: Date;
       tags: string[];
       dataType: string;
@@ -96,7 +98,7 @@ export interface DatasetQueryParams {
   dataType?: 'image' | 'text' | 'structured';
   search?: string;
   tags?: string | string[];
-  sortBy?: 'createdAt' | 'updatedAt' | 'name' | 'contributionCount';
+  sortBy?: 'created_at' | 'updated_at' | 'name' | 'contributionCount';
   sortOrder?: 'ASC' | 'DESC';
   userId?: number;
 }

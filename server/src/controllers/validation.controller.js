@@ -307,7 +307,7 @@ exports.getPendingContributions = async (req, res) => {
       limit = 20,
       datasetId,
       dataType,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'ASC'
     } = req.query;
 

@@ -221,11 +221,11 @@
               </div>
               <div class="summary-item">
                 <label>Created:</label>
-                <span>{{ dataset.createdAt | date:'medium' }}</span>
+                <span>{{ dataset.created_at | date:'medium' }}</span>
               </div>
               <div class="summary-item">
                 <label>Last Updated:</label>
-                <span>{{ dataset.updatedAt | date:'medium' }}</span>
+                <span>{{ dataset.updated_at | date:'medium' }}</span>
               </div>
             </div>
           </div>
@@ -311,7 +311,7 @@
             <mat-icon>schedule</mat-icon>
             <div class="info-details">
               <span class="info-label">Created</span>
-              <span class="info-value">{{ dataset.createdAt | date:'short' }}</span>
+              <span class="info-value">{{ dataset.created_at | date:'short' }}</span>
             </div>
           </div>
           
@@ -319,7 +319,7 @@
             <mat-icon>update</mat-icon>
             <div class="info-details">
               <span class="info-label">Last Modified</span>
-              <span class="info-value">{{ dataset.updatedAt | date:'short' }}</span>
+              <span class="info-value">{{ dataset.updated_at | date:'short' }}</span>
             </div>
           </div>
         </div>
