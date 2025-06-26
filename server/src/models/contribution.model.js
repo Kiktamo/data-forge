@@ -108,10 +108,27 @@ Contribution.prototype.toSafeObject = function() {
     isActive, created_at, updated_at
   } = this;
   
+  // Include contributor information if it exists
+  const contributorData = this.contributor ? {
+    id: this.contributor.id,
+    username: this.contributor.username,
+    fullName: this.contributor.fullName
+  } : null;
+  
+  // Include dataset information if it exists
+  const datasetData = this.dataset ? {
+    id: this.dataset.id,
+    name: this.dataset.name,
+    dataType: this.dataset.dataType,
+    visibility: this.dataset.visibility
+  } : null;
+  
   return {
     id, datasetId, contributorId, dataType, content, metadata,
     validationStatus, validatedBy, validationNotes, qualityScore,
-    isActive, created_at, updated_at
+    isActive, created_at, updated_at,
+    contributor: contributorData,
+    dataset: datasetData
   };
 };
 

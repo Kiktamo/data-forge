@@ -13,7 +13,7 @@ exports.getDatasets = async (req, res) => {
       dataType,
       search,
       tags,
-      sortBy = 'updatedAt',
+      sortBy = 'updated_at',
       sortOrder = 'DESC',
       userId
     } = req.query;
@@ -68,7 +68,9 @@ exports.getDatasets = async (req, res) => {
     // Calculate offset
     const offset = (page - 1) * limit;
 
-    // Get datasets with owner information
+    // console.log('Dataset controller where clause:', whereClause);
+
+    // FIXED: Add the missing include for owner information
     const { count, rows: datasets } = await Dataset.findAndCountAll({
       where: whereClause,
       include: [{
@@ -82,15 +84,33 @@ exports.getDatasets = async (req, res) => {
       distinct: true
     });
 
+    // console.log('Dataset controller raw results count:', count);
+    // console.log('Dataset controller first dataset with owner:', datasets[0]?.toJSON ? datasets[0].toJSON() : datasets[0]);
+
     // Calculate pagination info
     const totalPages = Math.ceil(count / limit);
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
+    // FIXED: Include owner information in response
+    const datasetsWithOwner = datasets.map(dataset => {
+      const datasetObj = dataset.toSafeObject();
+      return {
+        ...datasetObj,
+        owner: dataset.owner ? {
+          id: dataset.owner.id,
+          username: dataset.owner.username,
+          fullName: dataset.owner.fullName
+        } : null
+      };
+    });
+
+    // console.log('Dataset controller processed datasets:', datasetsWithOwner);
+
     res.json({
       success: true,
       data: {
-        datasets: datasets.map(dataset => dataset.toSafeObject()),
+        datasets: datasetsWithOwner,
         pagination: {
           currentPage: parseInt(page),
           totalPages,
@@ -426,7 +446,7 @@ exports.getDatasetHistory = async (req, res) => {
 
     if (!DatasetHistory) {
       // Debug: List all available models
-      console.log('Available Sequelize models:', Object.keys(Dataset.sequelize.models));
+      // console.log('Available Sequelize models:', Object.keys(Dataset.sequelize.models));
       
       // If history model doesn't exist, return empty history
       return res.json({
@@ -681,17 +701,85 @@ exports.getDatasetStats = async (req, res) => {
       });
     }
 
-    // Calculate basic statistics
+    // console.log('=== DATASET STATS DEBUG ===');
+    // console.log('Calculating stats for dataset:', id);
+
+    // FIXED: Calculate statistics from actual contribution data instead of relying on cached counts
+    const Contribution = require('../models/contribution.model');
+    
+    // Get total contributions
+    const totalContributions = await Contribution.count({
+      where: {
+        datasetId: id,
+        isActive: true
+      }
+    });
+
+    // Get validated (approved) contributions
+    const validatedContributions = await Contribution.count({
+      where: {
+        datasetId: id,
+        isActive: true,
+        validationStatus: 'approved'
+      }
+    });
+
+    // Get pending contributions
+    const pendingContributions = await Contribution.count({
+      where: {
+        datasetId: id,
+        isActive: true,
+        validationStatus: 'pending'
+      }
+    });
+
+    // Get rejected contributions (for completeness)
+    const rejectedContributions = await Contribution.count({
+      where: {
+        datasetId: id,
+        isActive: true,
+        validationStatus: 'rejected'
+      }
+    });
+
+    // console.log('Calculated stats:', {
+    //   totalContributions,
+    //   validatedContributions,
+    //   pendingContributions,
+    //   rejectedContributions
+    // });
+
+    // console.log('Dataset cached counts:', {
+    //   contributionCount: dataset.contributionCount,
+    //   validationCount: dataset.validationCount
+    // });
+
+    // FIXED: Update dataset cached counts if they don't match
+    if (dataset.contributionCount !== totalContributions || 
+        dataset.validationCount !== validatedContributions) {
+      
+      console.log('Updating cached counts in dataset');
+      await dataset.update({
+        contributionCount: totalContributions,
+        validationCount: validatedContributions
+      });
+    }
+
+    // Calculate accurate statistics
     const stats = {
-      totalContributions: dataset.contributionCount,
-      validatedContributions: dataset.validationCount,
-      pendingValidations: dataset.contributionCount - dataset.validationCount,
+      totalContributions: totalContributions,
+      validatedContributions: validatedContributions,
+      pendingValidations: pendingContributions,
+      rejectedContributions: rejectedContributions,
       currentVersion: dataset.currentVersion,
-      created_at: dataset.createdAt || dataset.created_at,
-      lastUpdated: dataset.updatedAt || dataset.updated_at,
+      created_at: dataset.created_at,
+      lastUpdated: dataset.updated_at,
       tags: dataset.tags,
       dataType: dataset.dataType
     };
+
+    // console.log('Final stats returned:', stats);
+    // console.log('=== END DATASET STATS DEBUG ===');
 
     res.json({
       success: true,

@@ -125,50 +125,57 @@ export class DatasetListComponent implements OnInit, OnDestroy {
   }
   
   // Load datasets from the API
-  loadDatasets(): void {
-    this.isLoading = true;
-    
-    const [sortBy, sortOrder] = this.selectedSortBy.includes('-') 
-      ? this.selectedSortBy.split('-') as [string, 'ASC' | 'DESC']
-      : [this.selectedSortBy, this.selectedSortOrder as 'ASC' | 'DESC'];
-    
-    const params: DatasetQueryParams = {
-      page: this.currentPage,
-      limit: this.pageSize,
-      search: this.searchQuery || undefined,
-      dataType: (this.selectedDataType as any) || undefined,
-      visibility: (this.selectedVisibility as any) || undefined,
-      sortBy: sortBy as any,
-      sortOrder: sortOrder
-    };
-    
-    // If in "my datasets" mode, get user's datasets
-    const request$ = this.isMyDatasetsMode && this.authService.currentUser
-      ? this.datasetService.getUserDatasets(Number(this.authService.currentUser.id), params)
-      : this.datasetService.getDatasets(params);
-    
-    request$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (response) => {
-        this.datasets = response.data.datasets;
-        this.currentPage = response.data.pagination.currentPage;
-        this.totalItems = response.data.pagination.totalItems;
-        this.totalPages = response.data.pagination.totalPages;
-        this.hasNext = response.data.pagination.hasNext;
-        this.hasPrev = response.data.pagination.hasPrev;
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading datasets:', error);
-        this.snackBar.open('Failed to load datasets. Please try again.', 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
-        this.isLoading = false;
-      }
-    });
+loadDatasets(): void {
+  this.isLoading = true;
+  
+  const [sortBy, sortOrder] = this.selectedSortBy.includes('-') 
+    ? this.selectedSortBy.split('-') as [string, 'ASC' | 'DESC']
+    : [this.selectedSortBy, this.selectedSortOrder as 'ASC' | 'DESC'];
+  
+  const params: DatasetQueryParams = {
+    page: this.currentPage,
+    limit: this.pageSize,
+    search: this.searchQuery || undefined,
+    dataType: (this.selectedDataType as any) || undefined,
+    visibility: (this.selectedVisibility as any) || undefined,
+    sortBy: sortBy as any,
+    sortOrder: sortOrder
+  };
+  
+  // FIXED: Proper handling of "my datasets" mode
+  let request$;
+  
+  if (this.isMyDatasetsMode && this.authService.currentUser) {
+    // For "My Datasets", add userId parameter and remove visibility restrictions
+    params.userId = Number(this.authService.currentUser.id);
+    request$ = this.datasetService.getDatasets(params);
+  } else {
+    // Regular dataset browsing
+    request$ = this.datasetService.getDatasets(params);
   }
+  
+  request$.pipe(
+    takeUntil(this.destroy$)
+  ).subscribe({
+    next: (response) => {
+      this.datasets = response.data.datasets;
+      this.currentPage = response.data.pagination.currentPage;
+      this.totalItems = response.data.pagination.totalItems;
+      this.totalPages = response.data.pagination.totalPages;
+      this.hasNext = response.data.pagination.hasNext;
+      this.hasPrev = response.data.pagination.hasPrev;
+      this.isLoading = false;
+    },
+    error: (error) => {
+      console.error('Error loading datasets:', error);
+      this.snackBar.open('Failed to load datasets. Please try again.', 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar']
+      });
+      this.isLoading = false;
+    }
+  });
+}
   
   // Handle search input
   onSearchInput(event: Event): void {

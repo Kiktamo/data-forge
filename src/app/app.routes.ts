@@ -24,7 +24,13 @@ export const routes: Routes = [
   { 
     path: 'datasets', 
     children: [
-      { path: '', loadComponent: () => import('./features/datasets/dataset-list/dataset-list.component').then(m => m.DatasetListComponent) },
+      { path: '', pathMatch: 'full', loadComponent: () => import('./features/datasets/dataset-list/dataset-list.component').then(m => m.DatasetListComponent) },
+      {
+        path: 'my',
+        loadComponent: () => import('./features/datasets/dataset-list/dataset-list.component').then(m => m.DatasetListComponent),
+        canActivate: [AuthGuard],
+        data: { myDatasets: true }
+      },
       { 
         path: 'new', 
         loadComponent: () => import('./features/datasets/dataset-create/dataset-create.component').then(m => m.DatasetCreateComponent),
@@ -40,12 +46,6 @@ export const routes: Routes = [
         path: ':id/contribute', 
         loadComponent: () => import('./features/contributions/contribution-create/contribution-create.component').then(m => m.ContributionCreateComponent),
         canActivate: [AuthGuard]
-      },
-      {
-        path: 'my',
-        loadComponent: () => import('./features/datasets/dataset-list/dataset-list.component').then(m => m.DatasetListComponent),
-        canActivate: [AuthGuard],
-        data: { myDatasets: true }
       }
     ]
   },
@@ -69,10 +69,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/validation/validation-queue/validation-queue.component').then(m => m.ValidationQueueComponent),
     canActivate: [AuthGuard]
   },
-  // { 
-  //   path: 'explore', 
-  //   loadComponent: () => import('./features/explore/explore.component').then(m => m.ExploreComponent) 
-  // },
   // { 
   //   path: 'docs', 
   //   loadComponent: () => import('./features/docs/docs.component').then(m => m.DocsComponent) 

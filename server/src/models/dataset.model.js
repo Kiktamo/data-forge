@@ -85,17 +85,28 @@ const Dataset = Temporal(sequelize.define('Dataset', {
 
 // Instance method to generate safe dataset object
 Dataset.prototype.toSafeObject = function() {
-
   const {
     id, name, description, ownerId, visibility, dataType,
     currentVersion, tags, contributionCount, validationCount,
-    isActive, createdAt, updatedAt
+    isActive, created_at, updated_at
   } = this;
+  
+  // Include owner information if it exists
+  const ownerData = this.owner ? {
+    id: this.owner.id,
+    username: this.owner.username,
+    fullName: this.owner.fullName
+  } : null;
   
   return {
     id, name, description, ownerId, visibility, dataType,
     currentVersion, tags, contributionCount, validationCount,
-    isActive, createdAt, updatedAt
+    isActive, 
+    createdAt: created_at,
+    updatedAt: updated_at,
+    created_at, 
+    updated_at,
+    owner: ownerData
   };
 };
 

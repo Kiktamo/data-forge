@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environments';
 import { Contribution } from '../models/contribution.model';
 
@@ -46,8 +46,8 @@ export interface Validation {
   notes?: string;
   validationCriteria?: any;
   timeSpent?: number;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date;  // FIXED: changed from createdAt
+  updated_at: Date;  // FIXED: changed from updatedAt
   validator?: {
     id: number;
     username: string;
@@ -75,14 +75,35 @@ export class ContributionService {
   constructor(private http: HttpClient) {}
   
   // Get contributions for a dataset
-  getContributionsByDataset(datasetId: number, params: ContributionQueryParams = {}): Observable<ContributionListResponse> {
-    return this.http.get<ContributionListResponse>(`${this.apiUrl}/datasets/${datasetId}/contributions`, { params: params as any });
-  }
+getContributionsByDataset(datasetId: number, params: ContributionQueryParams = {}): Observable<ContributionListResponse> {
+  
+  return this.http.get<ContributionListResponse>(`${this.apiUrl}/datasets/${datasetId}/contributions`, { params: params as any }).pipe(
+    map(response => {
+      
+      // Process each contribution to handle date fields
+      response.data.contributions = response.data.contributions.map(contribution => 
+        this.processContributionResponse(contribution)
+      );
+      
+      return response;
+    })
+  );
+}
   
   // Get single contribution by ID
-  getContributionById(id: number): Observable<ContributionResponse> {
-    return this.http.get<ContributionResponse>(`${this.apiUrl}/contributions/${id}`);
-  }
+getContributionById(id: number): Observable<ContributionResponse> {
+  
+  return this.http.get<ContributionResponse>(`${this.apiUrl}/contributions/${id}`).pipe(
+    map(response => {
+      
+      if (response.data.contribution) {
+        response.data.contribution = this.processContributionResponse(response.data.contribution);
+      }
+      
+      return response;
+    })
+  );
+}
   
   // Create new contribution
   createContribution(datasetId: number, formData: FormData): Observable<ContributionResponse> {
@@ -100,9 +121,30 @@ export class ContributionService {
   }
   
   // Get user's contributions
-  getUserContributions(userId: number, params: ContributionQueryParams = {}): Observable<ContributionListResponse> {
-    return this.http.get<ContributionListResponse>(`${this.apiUrl}/users/${userId}/contributions`, { params: params as any });
-  }
+getUserContributions(userId: number, params: ContributionQueryParams = {}): Observable<ContributionListResponse> {
+  
+  return this.http.get<ContributionListResponse>(`${this.apiUrl}/users/${userId}/contributions`, { params: params as any }).pipe(
+    map(response => {
+      // Process each contribution to handle date fields
+      response.data.contributions = response.data.contributions.map(contribution => 
+        this.processContributionResponse(contribution)
+      );
+      
+      return response;
+    })
+  );
+}
+
+  private processContributionResponse(contribution: any): any {
+  return {
+    ...contribution,
+    // Handle both camelCase and snake_case date fields
+    created_at: contribution.created_at ? new Date(contribution.created_at) : 
+               (contribution.createdAt ? new Date(contribution.createdAt) : new Date()),
+    updated_at: contribution.updated_at ? new Date(contribution.updated_at) : 
+               (contribution.updatedAt ? new Date(contribution.updatedAt) : new Date())
+  };
+}
   
 // Validation methods
 createValidation(contributionId: number, validation: {
@@ -114,9 +156,9 @@ createValidation(contributionId: number, validation: {
 }): Observable<{ success: boolean; data: { validation: Validation }; message?: string }> {
   
   // Debug logging
-  console.log('ContributionService.createValidation called with:');
-  console.log('Contribution ID:', contributionId);
-  console.log('Raw validation data:', validation);
+  // console.log('ContributionService.createValidation called with:');
+  // console.log('Contribution ID:', contributionId);
+  // console.log('Raw validation data:', validation);
   
   // Convert validationCriteria to JSON string if it's an object
   let processedValidation = { ...validation };
@@ -145,10 +187,10 @@ createValidation(contributionId: number, validation: {
   if (processedValidation.notes === undefined || processedValidation.notes === null) {
     processedValidation.notes = '';
   }
-  
-  console.log('Processed validation data:', processedValidation);
-  console.log('Making request to:', `${this.apiUrl}/contributions/${contributionId}/validations`);
-  
+
+  // console.log('Processed validation data:', processedValidation);
+  // console.log('Making request to:', `${this.apiUrl}/contributions/${contributionId}/validations`);
+
   return this.http.post<any>(
     `${this.apiUrl}/contributions/${contributionId}/validations`, 
     processedValidation

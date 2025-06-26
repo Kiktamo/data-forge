@@ -43,6 +43,20 @@ const upload = multer({
   }
 });
 
+const moveFileToTypeFolder = async (file, dataType) => {
+  const typeFolder = path.join(__dirname, `../../uploads/contributions/${dataType}s`);
+  await fs.mkdir(typeFolder, { recursive: true });
+  
+  const newPath = path.join(typeFolder, file.filename);
+  await fs.rename(file.path, newPath);
+  
+  return {
+    ...file,
+    path: newPath,
+    typeFolder: `${dataType}s`
+  };
+};
+
 // Get contributions for a dataset
 exports.getContributionsForDataset = async (req, res) => {
   try {
@@ -77,16 +91,43 @@ exports.getContributionsForDataset = async (req, res) => {
       });
     }
 
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      status,
-      contributorId: contributorId ? parseInt(contributorId) : undefined,
-      sortBy,
-      sortOrder
+    // Build where clause
+    const whereClause = {
+      datasetId: parseInt(datasetId),
+      isActive: true
     };
 
-    const { count, rows: contributions } = await Contribution.getForDataset(datasetId, options);
+    if (status) {
+      whereClause.validationStatus = status;
+    }
+
+    if (contributorId) {
+      whereClause.contributorId = parseInt(contributorId);
+    }
+
+    // Calculate offset
+    const offset = (page - 1) * limit;
+
+    // FIXED: Add proper includes for contributor and dataset information
+    const { count, rows: contributions } = await Contribution.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'contributor',
+          attributes: ['id', 'username', 'fullName']
+        },
+        {
+          model: Dataset,
+          as: 'dataset',
+          attributes: ['id', 'name', 'dataType', 'visibility', 'ownerId']
+        }
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      distinct: true
+    });
 
     // Calculate pagination info
     const totalPages = Math.ceil(count / limit);
@@ -250,41 +291,44 @@ exports.createContribution = [
         annotations: annotations ? JSON.parse(annotations) : {}
       };
 
-      if (req.file) {
-        // File-based contribution
-        const fileInfo = {
-          originalName: req.file.originalname,
-          filename: req.file.filename,
-          path: req.file.path,
-          size: req.file.size,
-          mimetype: req.file.mimetype
-        };
+if (req.file) {
+  // FIXED: Move file to appropriate type-specific folder
+  const movedFile = await moveFileToTypeFolder(req.file, dataset.dataType);
+  
+  const fileInfo = {
+    originalName: movedFile.originalname,
+    filename: movedFile.filename,
+    path: movedFile.path,
+    size: movedFile.size,
+    mimetype: movedFile.mimetype,
+    typeFolder: movedFile.typeFolder
+  };
 
-        switch (dataset.dataType) {
-          case 'image':
-            content = {
-              type: 'file',
-              file: fileInfo,
-              annotations: metadata.annotations
-            };
-            break;
-          case 'text':
-            // For text files, we might want to read the content
-            const textContent = await fs.readFile(req.file.path, 'utf-8');
-            content = {
-              type: 'file',
-              file: fileInfo,
-              text: textContent.substring(0, 10000) // Limit text length
-            };
-            break;
-          case 'structured':
-            content = {
-              type: 'file',
-              file: fileInfo,
-              preview: 'File uploaded - processing required'
-            };
-            break;
-        }
+  switch (dataset.dataType) {
+    case 'image':
+      content = {
+        type: 'file',
+        file: fileInfo,
+        annotations: metadata.annotations
+      };
+      break;
+    case 'text':
+      // For text files, we might want to read the content
+      const textContent = await fs.readFile(movedFile.path, 'utf-8');
+      content = {
+        type: 'file',
+        file: fileInfo,
+        text: textContent.substring(0, 10000) // Limit text length
+      };
+      break;
+    case 'structured':
+      content = {
+        type: 'file',
+        file: fileInfo,
+        preview: 'File uploaded - processing required'
+      };
+      break;
+  }
       } else {
         // Direct text/structured data contribution
         const { textContent, structuredData } = req.body;
@@ -522,6 +566,9 @@ exports.getUserContributions = async (req, res) => {
 
     const offset = (page - 1) * limit;
 
+    // console.log('Getting user contributions with where clause:', whereClause);
+
+    // FIXED: Ensure includes are present for dataset and contributor info
     const { count, rows: contributions } = await Contribution.findAndCountAll({
       where: whereClause,
       include: [
@@ -542,14 +589,38 @@ exports.getUserContributions = async (req, res) => {
       distinct: true
     });
 
+    // console.log('User contributions query result count:', count);
+    // console.log('First contribution with includes:', contributions[0]?.toJSON ? contributions[0].toJSON() : contributions[0]);
+
     const totalPages = Math.ceil(count / limit);
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
+    // FIXED: Include related data in response
+    const contributionsWithRelated = contributions.map(contribution => {
+      const contribObj = contribution.toSafeObject();
+      return {
+        ...contribObj,
+        contributor: contribution.contributor ? {
+          id: contribution.contributor.id,
+          username: contribution.contributor.username,
+          fullName: contribution.contributor.fullName
+        } : null,
+        dataset: contribution.dataset ? {
+          id: contribution.dataset.id,
+          name: contribution.dataset.name,
+          dataType: contribution.dataset.dataType,
+          visibility: contribution.dataset.visibility
+        } : null
+      };
+    });
+
+    // console.log('Processed user contributions:', contributionsWithRelated);
+
     res.json({
       success: true,
       data: {
-        contributions: contributions.map(c => c.toSafeObject()),
+        contributions: contributionsWithRelated,
         pagination: {
           currentPage: parseInt(page),
           totalPages,

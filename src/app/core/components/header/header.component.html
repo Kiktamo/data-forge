@@ -2,7 +2,7 @@
   <div class="header-container">
     <!-- Logo and branding -->
     <div class="brand">
-      <a routerLink="/" class="logo-link">
+      <a routerLink="/" class="logo-link" (click)="closeMenu()">
         <span class="logo-text">DataForge</span>
       </a>
       <span class="tagline">Dataset Creation & Curation</span>
@@ -11,12 +11,7 @@
     <!-- Navigation for desktop -->
     <nav class="desktop-nav">
       <a mat-button routerLink="/datasets" routerLinkActive="active">Datasets</a>
-      <a mat-button routerLink="/explore" routerLinkActive="active">Explore</a>
-      <!-- ADD VALIDATION QUEUE LINK -->
-      <a mat-button routerLink="/validate" routerLinkActive="active" *ngIf="authService.isAuthenticated()">
-        <mat-icon>fact_check</mat-icon>
-        Validate
-      </a>
+      <a mat-button routerLink="/validate" routerLinkActive="active" *ngIf="authService.isAuthenticated()">Validate</a>
       <a mat-button routerLink="/docs" routerLinkActive="active">Documentation</a>
     </nav>
     
@@ -47,7 +42,6 @@
             <mat-icon>history</mat-icon>
             <span>My Contributions</span>
           </a>
-          <!-- ADD VALIDATION QUEUE TO USER MENU TOO -->
           <a mat-menu-item routerLink="/validate">
             <mat-icon>fact_check</mat-icon>
             <span>Validation Queue</span>
@@ -65,35 +59,48 @@
     
     <!-- Mobile menu toggle -->
     <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMenu()">
-      <mat-icon>menu</mat-icon>
+      <mat-icon>{{ (isMenuOpen | async) ? 'close' : 'menu' }}</mat-icon>
     </button>
   </div>
 </mat-toolbar>
 
-<!-- Mobile navigation drawer -->
+<!-- FIXED: Mobile navigation drawer with better structure -->
 <div class="mobile-nav" [class.open]="(isMenuOpen | async)">
   <div class="mobile-nav-header">
     <span class="mobile-logo">DataForge</span>
-    <button mat-icon-button (click)="toggleMenu()">
+    <button mat-icon-button (click)="closeMenu()" class="close-button">
       <mat-icon>close</mat-icon>
     </button>
   </div>
   
   <nav class="mobile-nav-links">
-    <a routerLink="/datasets" routerLinkActive="active" (click)="toggleMenu()">Datasets</a>
-    <a routerLink="/explore" routerLinkActive="active" (click)="toggleMenu()">Explore</a>
-    <!-- ADD VALIDATION TO MOBILE NAV -->
-    <a routerLink="/validate" routerLinkActive="active" (click)="toggleMenu()" *ngIf="authService.isAuthenticated()">
-      <mat-icon>fact_check</mat-icon>
-      Validation Queue
-    </a>
-    <a routerLink="/docs" routerLinkActive="active" (click)="toggleMenu()">Documentation</a>
+    <!-- Main navigation -->
+    <div class="nav-section">
+      <a routerLink="/datasets" routerLinkActive="active" (click)="closeMenu()">
+        <mat-icon>dataset</mat-icon>
+        <span>Datasets</span>
+      </a>
+      <a routerLink="/validate" routerLinkActive="active" (click)="closeMenu()" *ngIf="authService.isAuthenticated()">
+        <mat-icon>fact_check</mat-icon>
+        <span>Validation Queue</span>
+      </a>
+      <a routerLink="/docs" routerLinkActive="active" (click)="closeMenu()">
+        <mat-icon>description</mat-icon>
+        <span>Documentation</span>
+      </a>
+    </div>
     
-    <!-- Auth links -->
-    <div class="mobile-auth-links">
+    <!-- Auth section -->
+    <div class="auth-section">
       <ng-container *ngIf="!authService.isAuthenticated()">
-        <a routerLink="/auth/login" (click)="toggleMenu()">Log In</a>
-        <a routerLink="/auth/register" (click)="toggleMenu()">Sign Up</a>
+        <a routerLink="/auth/login" (click)="closeMenu()" class="auth-link">
+          <mat-icon>login</mat-icon>
+          <span>Log In</span>
+        </a>
+        <a routerLink="/auth/register" (click)="closeMenu()" class="auth-link primary">
+          <mat-icon>person_add</mat-icon>
+          <span>Sign Up</span>
+        </a>
       </ng-container>
       
       <ng-container *ngIf="authService.isAuthenticated()">
@@ -104,16 +111,33 @@
           <div class="mobile-username">{{ currentUser?.username || 'User' }}</div>
         </div>
         
-        <a routerLink="/auth/profile" (click)="toggleMenu()">Profile</a>
-        <a routerLink="/datasets/my" (click)="toggleMenu()">My Datasets</a>
-        <a routerLink="/contributions" (click)="toggleMenu()">My Contributions</a>
-        <a routerLink="/validate" (click)="toggleMenu()">Validation Queue</a>
-        <a routerLink="/datasets/new" (click)="toggleMenu()">New Dataset</a>
-        <button class="logout-button" (click)="logout()">Log Out</button>
+        <div class="user-nav-section">
+          <a routerLink="/auth/profile" (click)="closeMenu()">
+            <mat-icon>account_circle</mat-icon>
+            <span>Profile</span>
+          </a>
+          <a routerLink="/datasets/my" (click)="closeMenu()">
+            <mat-icon>folder</mat-icon>
+            <span>My Datasets</span>
+          </a>
+          <a routerLink="/contributions" (click)="closeMenu()">
+            <mat-icon>history</mat-icon>
+            <span>My Contributions</span>
+          </a>
+          <a routerLink="/datasets/new" (click)="closeMenu()" class="create-dataset">
+            <mat-icon>add</mat-icon>
+            <span>New Dataset</span>
+          </a>
+        </div>
+        
+        <button class="logout-button" (click)="logout()">
+          <mat-icon>exit_to_app</mat-icon>
+          <span>Log Out</span>
+        </button>
       </ng-container>
     </div>
   </nav>
 </div>
 
 <!-- Overlay for mobile menu -->
-<div class="mobile-nav-overlay" [class.visible]="(isMenuOpen | async)" (click)="toggleMenu()"></div>
+<div class="mobile-nav-overlay" [class.visible]="(isMenuOpen | async)" (click)="closeMenu()"></div>

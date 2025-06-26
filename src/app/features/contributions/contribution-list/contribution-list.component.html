@@ -1,158 +1,214 @@
-    <div class="contribution-list-container">
-      <div class="page-header">
-        <h1 class="page-title">My Contributions</h1>
-        <p class="page-subtitle">Track your dataset contributions and validation status</p>
-      </div>
+<div class="contribution-list-container">
+  <div class="page-header">
+    <h1 class="page-title">My Contributions</h1>
+    <p class="page-subtitle">
+      Track your dataset contributions and validation status
+    </p>
+  </div>
 
-      <!-- Status Filter -->
-      <div class="filters-container">
-        <mat-form-field appearance="outline">
-          <mat-label>Filter by Status</mat-label>
-          <mat-select [(value)]="selectedStatus" (selectionChange)="onStatusChange()">
-            <mat-option value="">All Statuses</mat-option>
-            <mat-option value="pending">Pending Review</mat-option>
-            <mat-option value="approved">Approved</mat-option>
-            <mat-option value="rejected">Rejected</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
-
-      <!-- Loading spinner -->
-      <div class="loading-container" *ngIf="isLoading">
-        <mat-spinner diameter="40"></mat-spinner>
-        <p>Loading contributions...</p>
-      </div>
-
-      <!-- No contributions message -->
-      <div class="no-contributions" *ngIf="!isLoading && contributions.length === 0">
-        <mat-icon>add_circle_outline</mat-icon>
-        <h3>No contributions found</h3>
-        <p *ngIf="!selectedStatus">You haven't made any contributions yet.</p>
-        <p *ngIf="selectedStatus">No contributions found with status: {{ selectedStatus }}</p>
-        <div class="no-contributions-actions">
-          <a mat-raised-button color="primary" routerLink="/datasets">
-            Browse Datasets
-          </a>
-        </div>
-      </div>
-
-      <!-- Contributions list -->
-      <div class="contributions-grid" *ngIf="!isLoading && contributions.length > 0">
-        <mat-card class="contribution-card" *ngFor="let contribution of contributions">
-          <mat-card-content>
-            <div class="contribution-header">
-              <div class="data-type-icon" [ngClass]="contribution.dataType">
-                <mat-icon>{{ getDataTypeIcon(contribution.dataType) }}</mat-icon>
-              </div>
-              <div class="status-badge" [ngClass]="contribution.validationStatus">
-                <span>{{ getStatusLabel(contribution.validationStatus) }}</span>
-              </div>
-            </div>
-
-            <h3 class="dataset-name">
-              <a [routerLink]="['/datasets', contribution.datasetId]">
-                {{ contribution.dataset?.name || 'Unknown Dataset' }}
-              </a>
-            </h3>
-
-            <div class="contribution-preview">
-              <!-- Image preview -->
-              <div *ngIf="contribution.dataType === 'image' && contribution.content?.file" 
-                   class="image-preview">
-                <img [src]="getImagePreviewUrl(contribution)" 
-                     [alt]="contribution.metadata?.description || 'Contribution preview'"
-                     (error)="onImageError($event)">
-              </div>
-
-              <!-- Text preview -->
-              <div *ngIf="contribution.dataType === 'text' && (contribution.content?.text || contribution.content?.file)" 
-                   class="text-preview">
-                <p *ngIf="contribution.content?.text">{{ contribution.content.text | slice:0:150 }}...</p>
-                <p *ngIf="!contribution.content?.text && contribution.content?.file">
-                  📄 Text file: {{ contribution.content.file.originalName }}
-                </p>
-              </div>
-
-              <!-- Structured data preview -->
-              <div *ngIf="contribution.dataType === 'structured'" 
-                   class="structured-preview">
-                <mat-icon>table_chart</mat-icon>
-                <span *ngIf="contribution.content?.file">
-                  📊 {{ contribution.content.file.originalName }}
-                </span>
-                <span *ngIf="!contribution.content?.file">
-                  Structured data contribution
-                </span>
-              </div>
-            </div>
-
-            <div class="contribution-description" *ngIf="contribution.metadata?.description">
-              <p>{{ contribution.metadata.description }}</p>
-            </div>
-
-            <div class="contribution-tags" *ngIf="contribution.metadata?.tags?.length">
-              <mat-chip-set>
-                <mat-chip *ngFor="let tag of contribution.metadata.tags.slice(0, 3)">
-                  {{ tag }}
-                </mat-chip>
-                <mat-chip *ngIf="contribution.metadata.tags.length > 3" class="more-tags">
-                  +{{ contribution.metadata.tags.length - 3 }} more
-                </mat-chip>
-              </mat-chip-set>
-            </div>
-
-            <div class="contribution-meta">
-              <div class="meta-item">
-                <mat-icon>schedule</mat-icon>
-                <span>{{ contribution.created_at | date:'short' }}</span>
-              </div>
-              <div class="meta-item">
-                <mat-icon>dataset</mat-icon>
-                <span>{{ getDataTypeLabel(contribution.dataType) }}</span>
-              </div>
-              <div class="meta-item" *ngIf="contribution.qualityScore">
-                <mat-icon>star</mat-icon>
-                <span>{{ (contribution.qualityScore * 100) | number:'1.0-0' }}% quality</span>
-              </div>
-            </div>
-
-            <div class="validation-info" *ngIf="contribution.validationStatus !== 'pending'">
-              <div class="validation-count" *ngIf="contribution.validatedBy?.length">
-                <mat-icon>people</mat-icon>
-                <span>{{ contribution.validatedBy.length }} validator(s)</span>
-              </div>
-              <div class="validation-notes" *ngIf="contribution.validationNotes">
-                <mat-icon>comment</mat-icon>
-                <span>{{ contribution.validationNotes | slice:0:100 }}...</span>
-              </div>
-            </div>
-          </mat-card-content>
-
-          <mat-card-actions align="end">
-            <button mat-button [routerLink]="['/contributions', contribution.id]">
-              View Details
-            </button>
-            <button 
-              mat-button 
-              color="primary"
-              [routerLink]="['/datasets', contribution.datasetId]"
-            >
-              View Dataset
-            </button>
-          </mat-card-actions>
-        </mat-card>
-      </div>
-
-      <!-- Pagination -->
-      <mat-paginator 
-        *ngIf="!isLoading && totalItems > 0"
-        [length]="totalItems"
-        [pageSize]="pageSize"
-        [pageSizeOptions]="pageSizeOptions"
-        [pageIndex]="currentPage - 1"
-        (page)="onPageChange($event)"
-        aria-label="Select page"
-        showFirstLastButtons
+  <!-- Status Filter -->
+  <div class="filters-container">
+    <mat-form-field appearance="outline">
+      <mat-label>Filter by Status</mat-label>
+      <mat-select
+        [(value)]="selectedStatus"
+        (selectionChange)="onStatusChange()"
       >
-      </mat-paginator>
+        <mat-option value="">All Statuses</mat-option>
+        <mat-option value="pending">Pending Review</mat-option>
+        <mat-option value="approved">Approved</mat-option>
+        <mat-option value="rejected">Rejected</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Loading spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading contributions...</p>
+  </div>
+
+  <!-- No contributions message -->
+  <div
+    class="no-contributions"
+    *ngIf="!isLoading && contributions.length === 0"
+  >
+    <mat-icon>add_circle_outline</mat-icon>
+    <h3>No contributions found</h3>
+    <p *ngIf="!selectedStatus">You haven't made any contributions yet.</p>
+    <p *ngIf="selectedStatus">
+      No contributions found with status: {{ selectedStatus }}
+    </p>
+    <div class="no-contributions-actions">
+      <a mat-raised-button color="primary" routerLink="/datasets">
+        Browse Datasets
+      </a>
     </div>
+  </div>
+
+  <!-- Contributions list -->
+  <div
+    class="contributions-grid"
+    *ngIf="!isLoading && contributions.length > 0"
+  >
+    <mat-card
+      class="contribution-card"
+      *ngFor="let contribution of contributions"
+    >
+      <mat-card-content>
+        <div class="contribution-header">
+          <div class="data-type-icon" [ngClass]="contribution.dataType">
+            <mat-icon>{{ getDataTypeIcon(contribution.dataType) }}</mat-icon>
+          </div>
+          <div class="status-badge" [ngClass]="contribution.validationStatus">
+            <span>{{ getStatusLabel(contribution.validationStatus) }}</span>
+          </div>
+        </div>
+
+        <h3 class="dataset-name">
+          <a [routerLink]="['/datasets', contribution.datasetId]">
+            {{ contribution.dataset?.name || "Unknown Dataset" }}
+          </a>
+        </h3>
+
+        <div class="contribution-preview">
+          <!-- Image preview -->
+          <div
+            *ngIf="
+              contribution.dataType === 'image' && contribution.content?.file
+            "
+            class="image-preview"
+          >
+            <img
+              [src]="getImagePreviewUrl(contribution)"
+              [alt]="
+                contribution.metadata?.description || 'Contribution preview'
+              "
+              (error)="onImageError($event)"
+            />
+          </div>
+
+          <!-- Text preview -->
+          <div
+            *ngIf="
+              contribution.dataType === 'text' &&
+              (contribution.content?.text || contribution.content?.file)
+            "
+            class="text-preview"
+          >
+            <p *ngIf="contribution.content?.text">
+              {{ contribution.content.text | slice : 0 : 150 }}...
+            </p>
+            <p
+              *ngIf="!contribution.content?.text && contribution.content?.file"
+            >
+              📄 Text file: {{ contribution.content.file.originalName }}
+            </p>
+          </div>
+
+          <!-- Structured data preview -->
+          <div
+            *ngIf="contribution.dataType === 'structured'"
+            class="structured-preview"
+          >
+            <mat-icon>table_chart</mat-icon>
+            <span *ngIf="contribution.content?.file">
+              📊 {{ contribution.content.file.originalName }}
+            </span>
+            <span *ngIf="!contribution.content?.file">
+              Structured data contribution
+            </span>
+          </div>
+        </div>
+
+        <div
+          class="contribution-description"
+          *ngIf="contribution.metadata?.description"
+        >
+          <p>{{ contribution.metadata.description }}</p>
+        </div>
+
+        <div
+          class="contribution-tags"
+          *ngIf="contribution.metadata?.tags?.length"
+        >
+          <mat-chip-set>
+            <mat-chip
+              *ngFor="let tag of contribution.metadata.tags.slice(0, 3)"
+            >
+              {{ tag }}
+            </mat-chip>
+            <mat-chip
+              *ngIf="contribution.metadata.tags.length > 3"
+              class="more-tags"
+            >
+              +{{ contribution.metadata.tags.length - 3 }} more
+            </mat-chip>
+          </mat-chip-set>
+        </div>
+
+        <div class="contribution-meta">
+          <div class="meta-item">
+            <mat-icon>schedule</mat-icon>
+            <!-- FIXED: Use correct date field -->
+            <span>{{ contribution.created_at | date : "short" }}</span>
+          </div>
+          <div class="meta-item">
+            <mat-icon>dataset</mat-icon>
+            <span>{{ getDataTypeLabel(contribution.dataType) }}</span>
+          </div>
+          <div class="meta-item" *ngIf="contribution.qualityScore">
+            <mat-icon>star</mat-icon>
+            <span
+              >{{ contribution.qualityScore * 100 | number : "1.0-0" }}%
+              quality</span
+            >
+          </div>
+        </div>
+
+        <div
+          class="validation-info"
+          *ngIf="contribution.validationStatus !== 'pending'"
+        >
+          <div
+            class="validation-count"
+            *ngIf="contribution.validatedBy?.length"
+          >
+            <mat-icon>people</mat-icon>
+            <span>{{ contribution.validatedBy.length }} validator(s)</span>
+          </div>
+          <div class="validation-notes" *ngIf="contribution.validationNotes">
+            <mat-icon>comment</mat-icon>
+            <span>{{ contribution.validationNotes | slice : 0 : 100 }}...</span>
+          </div>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button [routerLink]="['/contributions', contribution.id]">
+          View Details
+        </button>
+        <button
+          mat-button
+          color="primary"
+          [routerLink]="['/datasets', contribution.datasetId]"
+        >
+          View Dataset
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <!-- Pagination -->
+  <mat-paginator
+    *ngIf="!isLoading && totalItems > 0"
+    [length]="totalItems"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="pageSizeOptions"
+    [pageIndex]="currentPage - 1"
+    (page)="onPageChange($event)"
+    aria-label="Select page"
+    showFirstLastButtons
+  >
+  </mat-paginator>
+</div>
