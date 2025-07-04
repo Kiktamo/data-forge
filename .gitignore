@@ -7,9 +7,9 @@
 /bazel-out
 
 # Node
-/node_modules
+*/node_modules
 /server/src/node_modules
-/server/src/.env
+*.env
 npm-debug.log
 yarn-error.log
 
