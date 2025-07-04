@@ -3,6 +3,7 @@ const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = requir
 const { validationResult } = require('express-validator');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
+const emailService = require('../services/email.service');
 
 // Register a new user
 exports.register = async (req, res) => {
@@ -30,17 +31,29 @@ exports.register = async (req, res) => {
     }
 
     // Generate email verification token
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
-    // Create new user
+    // Create new user with email verification fields
     const newUser = await User.create({
       username,
       email,
       password,
       fullName,
       bio,
-      emailVerificationToken
+      emailVerified: false,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
     });
+
+    // Send verification email
+    try {
+      const emailResult = await emailService.sendEmailVerification(newUser, verificationToken);
+      console.log('📧 Verification email sent successfully:', emailResult.previewUrl);
+    } catch (emailError) {
+      console.error('❌ Failed to send verification email:', emailError);
+      // Continue with registration even if email fails
+    }
 
     // Generate tokens
     const accessToken = generateAccessToken(newUser);
@@ -50,16 +63,14 @@ exports.register = async (req, res) => {
     newUser.refreshToken = refreshToken;
     await newUser.save();
 
-    // TODO: Send verification email
-    console.log(`Verification email sent to ${email} with token: ${emailVerificationToken}`);
-
     // Return user info and tokens
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'User registered successfully. Please check your email to verify your account.',
       user: newUser.toSafeObject(),
       accessToken,
-      refreshToken
+      refreshToken,
+      emailVerificationRequired: true
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -125,13 +136,121 @@ exports.login = async (req, res) => {
       message: 'Login successful',
       user: user.toSafeObject(),
       accessToken,
-      refreshToken
+      refreshToken,
+      emailVerified: user.emailVerified
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred during login',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Verify email
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification token is required'
+      });
+    }
+
+    // Hash the token to match stored format
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    // Find user with matching verification token that hasn't expired
+    const user = await User.findOne({
+      where: {
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires: { [Op.gt]: new Date() }
+      }
+    });
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email verification token is invalid or has expired'
+      });
+    }
+    
+    // Mark email as verified and clear token
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while verifying your email',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Resend email verification
+exports.resendEmailVerification = async (req, res) => {
+  try {
+    const { id } = req.user;
+    
+    // Find user
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+    
+    // Generate new verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+    
+    // Update user with new token
+    user.emailVerificationToken = hashedToken;
+    user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await user.save();
+    
+    // Send verification email
+    try {
+      const emailResult = await emailService.sendEmailVerification(user, verificationToken);
+      console.log('📧 Verification email resent successfully:', emailResult.previewUrl);
+    } catch (emailError) {
+      console.error('❌ Failed to resend verification email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Verification email sent successfully'
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while resending verification email',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -370,14 +489,21 @@ exports.requestPasswordReset = async (req, res) => {
     
     // Generate password reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiration = new Date(Date.now() + 3600000); // 1 hour
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     
     // Save token to user
-    user.passwordResetToken = resetToken;
-    user.passwordResetExpires = resetTokenExpiration;
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
     
-    // TODO: Send password reset email
+    // Send password reset email
+    try {
+      const emailResult = await emailService.sendPasswordReset(user, resetToken);
+      console.log('📧 Password reset email sent successfully:', emailResult.previewUrl);
+    } catch (emailError) {
+      console.error('❌ Failed to send password reset email:', emailError);
+      // Still return success to user for security
+    }
     
     res.status(200).json({
       success: true,
@@ -398,10 +524,20 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and new password are required'
+      });
+    }
+    
+    // Hash the token to match stored format
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
     // Find user with valid token
     const user = await User.findOne({
       where: {
-        passwordResetToken: token,
+        passwordResetToken: hashedToken,
         passwordResetExpires: { [Op.gt]: new Date() }
       }
     });
@@ -429,42 +565,6 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'An error occurred while resetting your password',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-// Verify email
-exports.verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.params;
-    
-    // Find user with matching verification token
-    const user = await User.findOne({
-      where: { emailVerificationToken: token }
-    });
-    
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email verification token is invalid'
-      });
-    }
-    
-    // Mark email as verified and clear token
-    user.emailVerified = true;
-    user.emailVerificationToken = null;
-    await user.save();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Email verified successfully'
-    });
-  } catch (error) {
-    console.error('Email verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'An error occurred while verifying your email',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

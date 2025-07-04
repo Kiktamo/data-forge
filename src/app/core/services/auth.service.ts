@@ -282,10 +282,28 @@ export class AuthService {
       );
   }
 
+  // Resend email verification
+  public resendEmailVerification(): Observable<void> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/resend-verification`, {})
+      .pipe(
+        map((response) => {
+          if (response.success) {
+            return void 0;
+          } else {
+            throw new Error(
+              response.message || 'Failed to resend verification email'
+            );
+          }
+        }),
+        catchError(this.handleError)
+      );
+  }
+
   // Verify email
   public verifyEmail(token: string): Observable<void> {
     return this.http
-      .get<AuthResponse>(`${this.apiUrl}/verify-email/${token}`)
+      .get<AuthResponse>(`${this.apiUrl}/verify-email?token=${token}`)
       .pipe(
         map((response) => {
           if (response.success) {

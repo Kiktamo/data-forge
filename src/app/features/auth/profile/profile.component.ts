@@ -40,6 +40,7 @@ export class ProfileComponent implements OnInit {
   hideCurrentPassword = true;
   hideNewPassword = true;
   hideConfirmPassword = true;
+  isResendingVerification = false;
 
   constructor(
     private fb: FormBuilder,
@@ -168,4 +169,26 @@ export class ProfileComponent implements OnInit {
   get passwordsMatch(): boolean {
     return this.passwordForm.get('newPassword')?.value === this.passwordForm.get('confirmPassword')?.value;
   }
+
+    onResendVerification(): void {
+    this.isResendingVerification = true;
+    
+    this.authService.resendEmailVerification().subscribe({
+      next: () => {
+        this.isResendingVerification = false;
+        this.snackBar.open('Verification email sent successfully! Please check your inbox.', 'Close', {
+          duration: 5000,
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: (error) => {
+        this.isResendingVerification = false;
+        this.snackBar.open(`Error sending verification email: ${error.message}`, 'Close', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
 }

@@ -1,0 +1,95 @@
+<div class="verify-email-container">
+  <!-- Loading State -->
+  <div *ngIf="isVerifying">
+    <mat-card class="verify-card">
+      <mat-card-header>
+        <mat-card-title>Verifying Your Email</mat-card-title>
+        <mat-card-subtitle>Please wait while we verify your email address</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content class="loading-content">
+        <mat-spinner></mat-spinner>
+        <p>This should only take a moment...</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Success State -->
+  <div *ngIf="!isVerifying && verificationSuccess">
+    <mat-card class="verify-card success">
+      <mat-card-header>
+        <mat-card-title>Email Verified Successfully!</mat-card-title>
+        <mat-card-subtitle>Your email address has been confirmed</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content class="success-content">
+        <div class="success-icon">
+          <mat-icon>verified</mat-icon>
+        </div>
+        
+        <p class="success-message">
+          Congratulations! Your email address has been successfully verified. 
+          You can now access all features of DataForge.
+        </p>
+        
+        <div class="success-actions">
+          <button mat-raised-button color="primary" routerLink="/datasets">
+            <mat-icon>explore</mat-icon>
+            Explore Datasets
+          </button>
+          
+          <button mat-stroked-button routerLink="/profile">
+            <mat-icon>person</mat-icon>
+            View Profile
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!isVerifying && !verificationSuccess">
+    <mat-card class="verify-card error">
+      <mat-card-header>
+        <mat-card-title>Email Verification Failed</mat-card-title>
+        <mat-card-subtitle>We couldn't verify your email address</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content class="error-content">
+        <div class="error-icon">
+          <mat-icon>error</mat-icon>
+        </div>
+        
+        <p class="error-message">
+          {{ errorMessage }}
+        </p>
+        
+        <div class="error-reasons">
+          <h4>This might happen if:</h4>
+          <ul>
+            <li>The verification link has expired (links expire after 24 hours)</li>
+            <li>The verification link has already been used</li>
+            <li>The verification link is invalid or corrupted</li>
+          </ul>
+        </div>
+        
+        <div class="error-actions">
+          <button mat-raised-button color="primary" routerLink="/profile" *ngIf="isLoggedIn">
+            <mat-icon>send</mat-icon>
+            Request New Verification Email
+          </button>
+          
+          <button mat-raised-button color="primary" routerLink="/auth/login" *ngIf="!isLoggedIn">
+            <mat-icon>login</mat-icon>
+            Log In to Resend
+          </button>
+          
+          <button mat-stroked-button routerLink="/">
+            <mat-icon>home</mat-icon>
+            Return Home
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

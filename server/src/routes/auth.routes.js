@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 
@@ -45,6 +45,15 @@ const loginValidation = [
     .withMessage('Password is required')
 ];
 
+// Email verification validation rules
+const emailVerificationValidation = [
+  query('token')
+    .notEmpty()
+    .withMessage('Verification token is required')
+    .isLength({ min: 64, max: 64 })
+    .withMessage('Invalid token format')
+];
+
 // Profile update validation rules
 const profileUpdateValidation = [
   body('fullName')
@@ -83,7 +92,9 @@ const passwordResetRequestValidation = [
 const passwordResetValidation = [
   body('token')
     .notEmpty()
-    .withMessage('Reset token is required'),
+    .withMessage('Reset token is required')
+    .isLength({ min: 64, max: 64 })
+    .withMessage('Invalid token format'),
   body('newPassword')
     .isLength({ min: 8 })
     .withMessage('New password must be at least 8 characters long')
@@ -97,15 +108,24 @@ const passwordResetValidation = [
 router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
 router.post('/refresh-token', authController.refreshToken);
+
+// Email verification routes
+router.get('/verify-email', emailVerificationValidation, authController.verifyEmail);
+
+// Password reset routes
 router.post('/request-password-reset', passwordResetRequestValidation, authController.requestPasswordReset);
 router.post('/reset-password', passwordResetValidation, authController.resetPassword);
-router.get('/verify-email/:token', authController.verifyEmail);
 
 // Protected routes (require authentication)
 router.use(authenticate);
+
+// User management routes
 router.post('/logout', authController.logout);
 router.get('/profile', authController.getProfile);
 router.put('/profile', profileUpdateValidation, authController.updateProfile);
 router.post('/change-password', passwordChangeValidation, authController.changePassword);
+
+// Email verification management for authenticated users
+router.post('/resend-verification', authController.resendEmailVerification);
 
 module.exports = router;

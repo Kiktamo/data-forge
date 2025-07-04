@@ -4,6 +4,7 @@ const Validation = require('../models/validation.model');
 const Contribution = require('../models/contribution.model');
 const Dataset = require('../models/dataset.model');
 const User = require('../models/user.model');
+const emailService = require('../services/email.service');
 
 // Create validation for a contribution
 exports.createValidation = async (req, res) => {
@@ -23,11 +24,18 @@ exports.createValidation = async (req, res) => {
     // Check if contribution exists
     const contribution = await Contribution.findOne({
       where: { id: contributionId, isActive: true },
-      include: [{
-        model: Dataset,
-        as: 'dataset',
-        attributes: ['id', 'name', 'ownerId', 'visibility']
-      }]
+      include: [
+        {
+          model: Dataset,
+          as: 'dataset',
+          attributes: ['id', 'name', 'ownerId', 'visibility']
+        },
+        {
+          model: User,
+          as: 'contributor',
+          attributes: ['id', 'username', 'fullName', 'email']
+        }
+      ]
     });
 
     if (!contribution) {
@@ -73,6 +81,9 @@ exports.createValidation = async (req, res) => {
       });
     }
 
+    // Store original status for email notification comparison
+    const originalStatus = contribution.validationStatus;
+
     // Create validation
     const validation = await Validation.create({
       contributionId: parseInt(contributionId),
@@ -91,7 +102,28 @@ exports.createValidation = async (req, res) => {
     });
 
     // Calculate consensus and update contribution status if needed
-    await updateContributionStatus(contribution);
+    const statusChanged = await updateContributionStatus(contribution);
+
+    // Send email notification if status changed to approved/rejected
+    if (statusChanged && contribution.contributor && contribution.contributor.email) {
+      try {
+        // Reload contribution to get updated status
+        await contribution.reload();
+        
+        if (contribution.validationStatus === 'approved' || contribution.validationStatus === 'rejected') {
+          await emailService.sendValidationNotification(
+            contribution.contributor,
+            contribution,
+            contribution.validationStatus,
+            notes || `Your contribution has been ${contribution.validationStatus} by the community.`
+          );
+          console.log(`📧 Validation notification sent to ${contribution.contributor.email} for ${contribution.validationStatus} contribution`);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send validation notification email:', emailError);
+        // Don't fail the validation creation if email fails
+      }
+    }
 
     // Fetch the created validation with validator info
     const createdValidation = await Validation.findOne({
@@ -194,7 +226,16 @@ exports.updateValidation = async (req, res) => {
     const { status, confidence, notes, validationCriteria, timeSpent } = req.body;
 
     const validation = await Validation.findOne({
-      where: { id, isActive: true }
+      where: { id, isActive: true },
+      include: [{
+        model: Contribution,
+        as: 'contribution',
+        include: [{
+          model: User,
+          as: 'contributor',
+          attributes: ['id', 'username', 'fullName', 'email']
+        }]
+      }]
     });
 
     if (!validation) {
@@ -212,6 +253,9 @@ exports.updateValidation = async (req, res) => {
       });
     }
 
+    // Store original contribution status for email notification comparison
+    const originalContributionStatus = validation.contribution.validationStatus;
+
     // Update validation
     await validation.update({
       status: status || validation.status,
@@ -222,9 +266,36 @@ exports.updateValidation = async (req, res) => {
     });
 
     // Recalculate contribution status
-    const contribution = await Contribution.findByPk(validation.contributionId);
+    const contribution = await Contribution.findByPk(validation.contributionId, {
+      include: [{
+        model: User,
+        as: 'contributor',
+        attributes: ['id', 'username', 'fullName', 'email']
+      }]
+    });
+    
     if (contribution) {
-      await updateContributionStatus(contribution);
+      const statusChanged = await updateContributionStatus(contribution);
+      
+      // Send email notification if status changed to approved/rejected
+      if (statusChanged && contribution.contributor && contribution.contributor.email) {
+        try {
+          await contribution.reload();
+          
+          if ((contribution.validationStatus === 'approved' || contribution.validationStatus === 'rejected') &&
+              contribution.validationStatus !== originalContributionStatus) {
+            await emailService.sendValidationNotification(
+              contribution.contributor,
+              contribution,
+              contribution.validationStatus,
+              notes || `Your contribution status has been updated to ${contribution.validationStatus}.`
+            );
+            console.log(`📧 Validation update notification sent to ${contribution.contributor.email}`);
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send validation update notification email:', emailError);
+        }
+      }
     }
 
     res.json({
@@ -248,7 +319,16 @@ exports.deleteValidation = async (req, res) => {
     const { id } = req.params;
 
     const validation = await Validation.findOne({
-      where: { id, isActive: true }
+      where: { id, isActive: true },
+      include: [{
+        model: Contribution,
+        as: 'contribution',
+        include: [{
+          model: User,
+          as: 'contributor',
+          attributes: ['id', 'username', 'fullName', 'email']
+        }]
+      }]
     });
 
     if (!validation) {
@@ -269,11 +349,21 @@ exports.deleteValidation = async (req, res) => {
       });
     }
 
+    // Store original contribution status for email notification comparison
+    const originalContributionStatus = validation.contribution.validationStatus;
+
     // Soft delete
     await validation.update({ isActive: false });
 
     // Update contribution's validated_by array
-    const contribution = await Contribution.findByPk(validation.contributionId);
+    const contribution = await Contribution.findByPk(validation.contributionId, {
+      include: [{
+        model: User,
+        as: 'contributor',
+        attributes: ['id', 'username', 'fullName', 'email']
+      }]
+    });
+    
     if (contribution) {
       const updatedValidatedBy = (contribution.validatedBy || [])
         .filter(id => id !== req.user.id);
@@ -282,7 +372,26 @@ exports.deleteValidation = async (req, res) => {
       });
 
       // Recalculate contribution status
-      await updateContributionStatus(contribution);
+      const statusChanged = await updateContributionStatus(contribution);
+      
+      // Send email notification if status changed due to validation removal
+      if (statusChanged && contribution.contributor && contribution.contributor.email) {
+        try {
+          await contribution.reload();
+          
+          if (contribution.validationStatus !== originalContributionStatus) {
+            await emailService.sendValidationNotification(
+              contribution.contributor,
+              contribution,
+              contribution.validationStatus,
+              `A validation for your contribution was removed, changing its status to ${contribution.validationStatus}.`
+            );
+            console.log(`📧 Validation removal notification sent to ${contribution.contributor.email}`);
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send validation removal notification email:', emailError);
+        }
+      }
     }
 
     res.json({
@@ -400,8 +509,11 @@ exports.getPendingContributions = async (req, res) => {
 };
 
 // Helper function to update contribution status based on validations
+// UPDATED: Now returns whether the status actually changed
 async function updateContributionStatus(contribution) {
   try {
+    const originalStatus = contribution.validationStatus;
+    
     const validations = await Validation.findAll({
       where: {
         contributionId: contribution.id,
@@ -410,14 +522,19 @@ async function updateContributionStatus(contribution) {
     });
 
     if (validations.length === 0) {
-      return; // No validations yet
+      // If no validations and not pending, reset to pending
+      if (contribution.validationStatus !== 'pending') {
+        await contribution.update({ validationStatus: 'pending' });
+        return true; // Status changed
+      }
+      return false; // No change
     }
 
     const approvedCount = validations.filter(v => v.status === 'approved').length;
     const rejectedCount = validations.filter(v => v.status === 'rejected').length;
     const totalValidations = validations.length;
 
-    // Simple consensus rules - can be made more sophisticated
+    // Enhanced consensus rules with better logging
     let newStatus = contribution.validationStatus;
 
     if (totalValidations >= 2) {
@@ -426,27 +543,42 @@ async function updateContributionStatus(contribution) {
       } else if (rejectedCount > approvedCount && rejectedCount / totalValidations >= 0.6) {
         newStatus = 'rejected';
       }
+    } else if (totalValidations === 1) {
+      // For single validation, require unanimous decision with high confidence
+      const singleValidation = validations[0];
+      if (singleValidation.confidence && singleValidation.confidence >= 0.8) {
+        newStatus = singleValidation.status;
+      }
     }
 
+    console.log(`🔍 Contribution ${contribution.id} validation consensus: ${approvedCount} approved, ${rejectedCount} rejected, ${totalValidations} total. Status: ${originalStatus} → ${newStatus}`);
+
     // Update contribution status if it changed
-    if (newStatus !== contribution.validationStatus) {
+    if (newStatus !== originalStatus) {
       await contribution.update({ validationStatus: newStatus });
 
       // Update dataset validation count if approved
-      if (newStatus === 'approved' && contribution.validationStatus !== 'approved') {
+      if (newStatus === 'approved' && originalStatus !== 'approved') {
         const dataset = await Dataset.findByPk(contribution.datasetId);
         if (dataset) {
           await dataset.increment('validationCount');
+          console.log(`📊 Dataset ${dataset.id} validation count incremented`);
         }
-      } else if (contribution.validationStatus === 'approved' && newStatus !== 'approved') {
+      } else if (originalStatus === 'approved' && newStatus !== 'approved') {
         const dataset = await Dataset.findByPk(contribution.datasetId);
         if (dataset && dataset.validationCount > 0) {
           await dataset.decrement('validationCount');
+          console.log(`📊 Dataset ${dataset.id} validation count decremented`);
         }
       }
+      
+      return true; // Status changed
     }
+    
+    return false; // No status change
   } catch (error) {
     console.error('Error updating contribution status:', error);
+    return false;
   }
 }
 

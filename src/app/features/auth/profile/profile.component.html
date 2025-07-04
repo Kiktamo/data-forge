@@ -194,9 +194,11 @@
               mat-raised-button 
               color="primary" 
               *ngIf="!user.emailVerified"
-              disabled
+              [disabled]="isResendingVerification"
+              (click)="onResendVerification()"
             >
-              Resend Verification Email
+              <mat-spinner diameter="20" *ngIf="isResendingVerification"></mat-spinner>
+              <span *ngIf="!isResendingVerification">Resend Verification Email</span>
             </button>
             
             <div class="divider"></div>
