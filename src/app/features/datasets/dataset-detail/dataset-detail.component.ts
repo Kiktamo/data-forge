@@ -27,6 +27,7 @@ import { WebSocketService } from '../../../core/services/web-socket.service';
 import { PresenceIndicatorComponent } from '../../../core/components/presence-indicator/presence-indicator.component';
 import { Contribution } from '../../../core/models/contribution.model';
 import { ContributionService } from '../../../core/services/contribution.service';
+import { ExportDialogComponent } from '../../../core/components/export-dialog/export-dialog.component';
 
 
 interface DatasetStats {
@@ -426,15 +427,26 @@ export class DatasetDetailComponent implements OnInit, OnDestroy {
     }
   }
   
-  downloadDataset(): void {
-    if (!this.dataset) return;
-    
-    // This would implement dataset export functionality
-    // For now, just show a message
-    this.snackBar.open('Dataset download feature coming soon', 'Close', {
-      duration: 3000
-    });
-  }
+downloadDataset(): void {
+  if (!this.dataset) return;
+
+  const dialogRef = this.dialog.open(ExportDialogComponent, {
+    width: '600px',
+    maxWidth: '90vw',
+    data: {
+      dataset: this.dataset,
+      isOwner: this.canEditDataset()
+    },
+    disableClose: false
+  });
+
+  dialogRef.afterClosed().subscribe(result => {
+    if (result) {
+      // Export was successful
+      console.log('Dataset export completed');
+    }
+  });
+}
 
    // Load contributions for this dataset
   loadContributions(page: number = 1): void {

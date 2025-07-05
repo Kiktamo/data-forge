@@ -25,6 +25,8 @@
     "@ngrx/entity": "^19.1.0",
     "@ngrx/store": "^19.1.0",
     "@ngrx/store-devtools": "^19.1.0",
+    "@types/file-saver": "^2.0.7",
+    "file-saver": "^2.0.5",
     "ngx-toastr": "^19.0.0",
     "pg": "^8.15.6",
     "pg-hstore": "^2.3.4",

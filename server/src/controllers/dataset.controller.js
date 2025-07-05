@@ -2,6 +2,12 @@ const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 const Dataset = require('../models/dataset.model');
 const User = require('../models/user.model');
+const archiver = require('archiver');
+const fs = require('fs').promises;
+const fsSync = require('fs');
+const path = require('path');
+const { createReadStream } = require('fs');
+const Contribution = require('../models/contribution.model');
 
 // Get all datasets (with filtering and pagination)
 exports.getDatasets = async (req, res) => {
@@ -794,3 +800,470 @@ exports.getDatasetStats = async (req, res) => {
     });
   }
 };
+
+// Export dataset in various formats
+exports.exportDataset = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      format = 'zip', 
+      includeRejected = false, 
+      includePending = false 
+    } = req.query;
+
+    // Validate format
+    const validFormats = ['json', 'csv', 'zip'];
+    if (!validFormats.includes(format)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid export format. Supported formats: json, csv, zip'
+      });
+    }
+
+    // Find dataset with owner info
+    const dataset = await Dataset.findOne({
+      where: { id, isActive: true },
+      include: [{
+        model: User,
+        as: 'owner',
+        attributes: ['id', 'username', 'fullName', 'email']
+      }]
+    });
+
+    if (!dataset) {
+      return res.status(404).json({
+        success: false,
+        message: 'Dataset not found'
+      });
+    }
+
+    // Check export permissions
+    const isOwner = req.user && req.user.id === dataset.ownerId;
+    const isAdmin = req.user && req.user.roles.includes('admin');
+    
+    if (dataset.visibility === 'private' && !isOwner && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied to private dataset'
+      });
+    }
+
+    // Build contribution filter based on permissions and preferences
+    const contributionWhere = {
+      datasetId: id,
+      isActive: true
+    };
+
+    // Filter by validation status
+    const allowedStatuses = ['approved'];
+    if (isOwner || isAdmin) {
+      // Owners can choose to include pending/rejected
+      if (includePending === 'true') allowedStatuses.push('pending');
+      if (includeRejected === 'true') allowedStatuses.push('rejected');
+    }
+    contributionWhere.validationStatus = { [Op.in]: allowedStatuses };
+
+    // Get all contributions with related data
+    const contributions = await Contribution.findAll({
+      where: contributionWhere,
+      include: [
+        {
+          model: User,
+          as: 'contributor',
+          attributes: ['id', 'username', 'fullName']
+        }
+      ],
+      order: [['created_at', 'ASC']]
+    });
+
+    console.log(`📊 Exporting dataset ${id} with ${contributions.length} contributions in ${format} format`);
+
+    // Generate export based on format
+    switch (format) {
+      case 'json':
+        return await exportAsJSON(res, dataset, contributions);
+      case 'csv':
+        return await exportAsCSV(res, dataset, contributions);
+      case 'zip':
+        return await exportAsZIP(res, dataset, contributions);
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Unsupported export format'
+        });
+    }
+
+  } catch (error) {
+    console.error('Error exporting dataset:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export dataset',
+      error: error.message
+    });
+  }
+};
+
+// Export as JSON with complete metadata
+async function exportAsJSON(res, dataset, contributions) {
+  const exportData = {
+    dataset: {
+      id: dataset.id,
+      name: dataset.name,
+      description: dataset.description,
+      dataType: dataset.dataType,
+      visibility: dataset.visibility,
+      currentVersion: dataset.currentVersion,
+      tags: dataset.tags,
+      created_at: dataset.created_at,
+      updated_at: dataset.updated_at,
+      owner: {
+        id: dataset.owner.id,
+        username: dataset.owner.username,
+        fullName: dataset.owner.fullName
+      },
+      statistics: {
+        totalContributions: contributions.length,
+        approvedContributions: contributions.filter(c => c.validationStatus === 'approved').length,
+        pendingContributions: contributions.filter(c => c.validationStatus === 'pending').length,
+        rejectedContributions: contributions.filter(c => c.validationStatus === 'rejected').length
+      }
+    },
+    contributions: contributions.map(contribution => ({
+      id: contribution.id,
+      dataType: contribution.dataType,
+      validationStatus: contribution.validationStatus,
+      content: contribution.content,
+      metadata: contribution.metadata,
+      contributor: {
+        id: contribution.contributor.id,
+        username: contribution.contributor.username,
+        fullName: contribution.contributor.fullName
+      },
+      created_at: contribution.created_at,
+      updated_at: contribution.updated_at
+    })),
+    exportMetadata: {
+      exportedAt: new Date().toISOString(),
+      exportFormat: 'json',
+      exportVersion: '1.0',
+      generatedBy: 'DataForge Export System'
+    }
+  };
+
+  // Set appropriate headers
+  const filename = `${dataset.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.json`;
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-cache');
+
+  res.json(exportData);
+}
+
+// Export as CSV (for structured data compatibility)
+async function exportAsCSV(res, dataset, contributions) {
+  let csvContent = '';
+  
+  // CSV header based on data type
+  if (dataset.dataType === 'structured') {
+    // For structured data, try to create a unified CSV
+    csvContent = 'contribution_id,contributor_username,validation_status,created_at,content_type';
+    
+    // Find common fields across contributions
+    const allFields = new Set();
+    contributions.forEach(contrib => {
+      if (contrib.content.type === 'direct' && contrib.content.data) {
+        Object.keys(contrib.content.data).forEach(key => allFields.add(key));
+      }
+    });
+    
+    // Add dynamic columns for structured fields
+    const sortedFields = Array.from(allFields).sort();
+    csvContent += ',' + sortedFields.join(',') + '\n';
+    
+    // Add data rows
+    contributions.forEach(contrib => {
+      const row = [
+        contrib.id,
+        contrib.contributor.username,
+        contrib.validationStatus,
+        contrib.created_at,
+        contrib.content.type
+      ];
+      
+      // Add structured data fields
+      sortedFields.forEach(field => {
+        if (contrib.content.type === 'direct' && contrib.content.data && contrib.content.data[field]) {
+          row.push(`"${contrib.content.data[field]}"`);
+        } else {
+          row.push('');
+        }
+      });
+      
+      csvContent += row.join(',') + '\n';
+    });
+    
+  } else {
+    // For other data types, create a contribution summary CSV
+    csvContent = 'contribution_id,contributor_username,contributor_fullname,validation_status,data_type,has_file,description,tags,created_at\n';
+    
+    contributions.forEach(contrib => {
+      const row = [
+        contrib.id,
+        contrib.contributor.username,
+        `"${contrib.contributor.fullName || ''}"`,
+        contrib.validationStatus,
+        contrib.dataType,
+        contrib.content.type === 'file' ? 'yes' : 'no',
+        `"${(contrib.metadata.description || '').replace(/"/g, '""')}"`,
+        `"${(contrib.metadata.tags || []).join('; ')}"`,
+        contrib.created_at
+      ];
+      
+      csvContent += row.join(',') + '\n';
+    });
+  }
+
+  // Set appropriate headers
+  const filename = `${dataset.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.csv`;
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-cache');
+
+  res.send(csvContent);
+}
+
+// Export as ZIP archive with files and metadata
+async function exportAsZIP(res, dataset, contributions) {
+  const filename = `${dataset.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.zip`;
+  
+  // Set response headers for streaming ZIP
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-cache');
+
+  // Create ZIP archive stream
+  const archive = archiver('zip', {
+    zlib: { level: 9 } // Compression level
+  });
+
+  // Handle archive errors
+  archive.on('error', (err) => {
+    console.error('Archive error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create archive',
+        error: err.message
+      });
+    }
+  });
+
+  // Pipe archive to response
+  archive.pipe(res);
+
+  // Add dataset metadata
+  const datasetMetadata = {
+    dataset: {
+      id: dataset.id,
+      name: dataset.name,
+      description: dataset.description,
+      dataType: dataset.dataType,
+      visibility: dataset.visibility,
+      currentVersion: dataset.currentVersion,
+      tags: dataset.tags,
+      created_at: dataset.created_at,
+      updated_at: dataset.updated_at,
+      owner: {
+        username: dataset.owner.username,
+        fullName: dataset.owner.fullName
+      }
+    },
+    statistics: {
+      totalContributions: contributions.length,
+      approvedContributions: contributions.filter(c => c.validationStatus === 'approved').length,
+      pendingContributions: contributions.filter(c => c.validationStatus === 'pending').length,
+      rejectedContributions: contributions.filter(c => c.validationStatus === 'rejected').length
+    },
+    exportMetadata: {
+      exportedAt: new Date().toISOString(),
+      exportFormat: 'zip',
+      exportVersion: '1.0'
+    }
+  };
+
+  archive.append(JSON.stringify(datasetMetadata, null, 2), { name: 'metadata.json' });
+
+  // Add contributions data
+  const contributionsData = contributions.map(contribution => ({
+    id: contribution.id,
+    dataType: contribution.dataType,
+    validationStatus: contribution.validationStatus,
+    content: contribution.content,
+    metadata: contribution.metadata,
+    contributor: {
+      username: contribution.contributor.username,
+      fullName: contribution.contributor.fullName
+    },
+    created_at: contribution.created_at
+  }));
+
+  archive.append(JSON.stringify(contributionsData, null, 2), { name: 'contributions/data.json' });
+
+  // Add CSV manifest for easy viewing
+  let csvManifest = 'id,contributor,validation_status,data_type,has_file,filename,description,created_at\n';
+  
+  let filesAdded = 0;
+  let filesSkipped = 0;
+  
+  for (const contrib of contributions) {
+    const hasFile = contrib.content.type === 'file';
+    const filename = hasFile ? contrib.content.file.filename : '';
+    
+    csvManifest += [
+      contrib.id,
+      contrib.contributor.username,
+      contrib.validationStatus,
+      contrib.dataType,
+      hasFile ? 'yes' : 'no',
+      `"${filename}"`,
+      `"${(contrib.metadata.description || '').replace(/"/g, '""')}"`,
+      contrib.created_at
+    ].join(',') + '\n';
+
+    // FIXED: Add actual files to archive with correct path resolution
+    if (hasFile && contrib.content.file.filename) {
+      // Try multiple path strategies to find the file
+      const possiblePaths = [];
+      
+      // Strategy 1: Check if typeFolder is available (new organized structure)
+      if (contrib.content.file.typeFolder) {
+        possiblePaths.push(path.join(
+          __dirname, 
+          '../../uploads/contributions', 
+          contrib.content.file.typeFolder, 
+          contrib.content.file.filename
+        ));
+      }
+      
+      // Strategy 2: Try the organized folder based on data type (fallback)
+      const typeFolderMap = {
+        'image': 'images',
+        'text': 'text',
+        'structured': 'structured'
+      };
+      const typeFolder = typeFolderMap[contrib.dataType];
+      if (typeFolder) {
+        possiblePaths.push(path.join(
+          __dirname, 
+          '../../uploads/contributions', 
+          typeFolder, 
+          contrib.content.file.filename
+        ));
+      }
+      
+      // Strategy 3: Try the old direct path (for backwards compatibility)
+      if (contrib.content.file.path) {
+        possiblePaths.push(contrib.content.file.path);
+      }
+      
+      // Strategy 4: Try root uploads folder (last resort)
+      possiblePaths.push(path.join(
+        __dirname, 
+        '../../uploads/contributions', 
+        contrib.content.file.filename
+      ));
+
+      console.log(`🔍 Searching for file: ${contrib.content.file.filename}`);
+      console.log(`📁 Contribution data type: ${contrib.dataType}`);
+      console.log(`📂 Type folder from DB: ${contrib.content.file.typeFolder}`);
+
+      let fileFound = false;
+      
+      for (const sourcePath of possiblePaths) {
+        try {
+          // Check if file exists at this path
+          await fs.access(sourcePath);
+          
+          // Determine archive path based on data type
+          const archiveTypeFolder = typeFolderMap[contrib.dataType] || 'other';
+          const archivePath = `contributions/files/${archiveTypeFolder}/${contrib.content.file.filename}`;
+          
+          // Add file to archive
+          archive.file(sourcePath, { name: archivePath });
+          
+          console.log(`📎 Added file to archive: ${archivePath}`);
+          console.log(`📁 Source path: ${sourcePath}`);
+          
+          filesAdded++;
+          fileFound = true;
+          break;
+          
+        } catch (fileError) {
+          // File not found at this path, try next one
+          console.log(`❌ File not found at: ${sourcePath}`);
+          continue;
+        }
+      }
+      
+      if (!fileFound) {
+        console.warn(`⚠️ File not found for contribution ${contrib.id}: ${contrib.content.file.filename}`);
+        console.warn(`⚠️ Tried paths:`, possiblePaths);
+        filesSkipped++;
+      }
+    }
+  }
+
+  archive.append(csvManifest, { name: 'contributions/manifest.csv' });
+
+  // Add README with file statistics
+  const readmeContent = `# ${dataset.name} - Dataset Export
+
+## Dataset Information
+- **Name**: ${dataset.name}
+- **Description**: ${dataset.description || 'No description provided'}
+- **Data Type**: ${dataset.dataType}
+- **Version**: ${dataset.currentVersion}
+- **Owner**: ${dataset.owner.fullName || dataset.owner.username}
+- **Created**: ${dataset.created_at}
+- **Exported**: ${new Date().toISOString()}
+
+## Export Contents
+
+### Files Structure
+- \`metadata.json\` - Complete dataset metadata and statistics
+- \`contributions/data.json\` - All contribution data with metadata
+- \`contributions/manifest.csv\` - Human-readable contribution summary
+- \`contributions/files/\` - Actual uploaded files organized by type
+  - \`images/\` - Image contributions
+  - \`text/\` - Text file contributions  
+  - \`structured/\` - Structured data file contributions
+
+### Statistics
+- **Total Contributions**: ${contributions.length}
+- **Approved**: ${contributions.filter(c => c.validationStatus === 'approved').length}
+- **Pending**: ${contributions.filter(c => c.validationStatus === 'pending').length}
+- **Rejected**: ${contributions.filter(c => c.validationStatus === 'rejected').length}
+
+### File Export Results
+- **Files Successfully Added**: ${filesAdded}
+- **Files Skipped (Not Found)**: ${filesSkipped}
+- **File Success Rate**: ${contributions.length > 0 ? Math.round((filesAdded / contributions.filter(c => c.content.type === 'file').length) * 100) : 100}%
+
+## Usage Notes
+- All contributions included in this export have been validated according to the dataset's quality standards
+- File references in \`data.json\` correspond to files in the \`files/\` directory
+- The CSV manifest provides a quick overview of all contributions
+- If some files are missing, they may have been moved or deleted from the server
+
+---
+Generated by DataForge Export System v1.0
+`;
+
+  archive.append(readmeContent, { name: 'README.txt' });
+
+  // Finalize archive
+  await archive.finalize();
+  
+  console.log(`📦 ZIP export completed for dataset ${dataset.id}`);
+  console.log(`📊 Export summary: ${filesAdded} files added, ${filesSkipped} files skipped`);
+}

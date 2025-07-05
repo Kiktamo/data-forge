@@ -1,0 +1,123 @@
+    <div class="export-dialog">
+      <h2 mat-dialog-title>
+        <mat-icon>download</mat-icon>
+        Export Dataset: {{ data.dataset.name }}
+      </h2>
+      
+      <mat-dialog-content>
+        <form [formGroup]="exportForm" class="export-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Export Format</mat-label>
+            <mat-select formControlName="format">
+              <mat-option value="zip">
+                <div class="format-option">
+                  <div>
+                    <div class="format-name">ZIP Archive </div>
+                  </div>
+                </div>
+              </mat-option>
+              <mat-option value="json">
+                <div class="format-option">
+                  <div>
+                    <div class="format-name">JSON </div>
+                  </div>
+                </div>
+              </mat-option>
+              <mat-option value="csv">
+                <div class="format-option">
+                  <div>
+                    <div class="format-name">CSV </div>
+                  </div>
+                </div>
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="options-section" *ngIf="data.isOwner">
+            <h3>Export Options (Owner Only)</h3>
+            <p class="options-description">
+              As the dataset owner, you can choose to include contributions beyond approved ones.
+            </p>
+            
+            <mat-checkbox formControlName="includePending">
+              Include Pending Contributions
+              <span class="option-count" *ngIf="stats">({{ stats.pendingValidations || 0 }})</span>
+            </mat-checkbox>
+            
+            <mat-checkbox formControlName="includeRejected">
+              Include Rejected Contributions
+              <span class="option-count" *ngIf="stats">({{ stats.rejectedContributions || 0 }})</span>
+            </mat-checkbox>
+          </div>
+
+          <div class="export-preview" *ngIf="stats">
+            <h3>Export Preview</h3>
+            <div class="preview-stats">
+              <div class="stat-item">
+                <mat-icon>check_circle</mat-icon>
+                <span>{{ stats.validatedContributions || 0 }} Approved Contributions</span>
+              </div>
+              <div class="stat-item" *ngIf="data.isOwner && exportForm.get('includePending')?.value">
+                <mat-icon>schedule</mat-icon>
+                <span>{{ stats.pendingValidations || 0 }} Pending Contributions</span>
+              </div>
+              <div class="stat-item" *ngIf="data.isOwner && exportForm.get('includeRejected')?.value">
+                <mat-icon>cancel</mat-icon>
+                <span>{{ stats.rejectedContributions || 0 }} Rejected Contributions</span>
+              </div>
+            </div>
+            
+            <div class="format-info" [ngSwitch]="exportForm.get('format')?.value">
+              <div *ngSwitchCase="'zip'" class="format-details">
+                <h4>ZIP Archive Contents:</h4>
+                <ul>
+                  <li>Complete dataset metadata</li>
+                  <li>All contribution data and annotations</li>
+                  <li>Original uploaded files</li>
+                  <li>CSV manifest for easy viewing</li>
+                  <li>README with usage instructions</li>
+                </ul>
+              </div>
+              
+              <div *ngSwitchCase="'json'" class="format-details">
+                <h4>JSON Export Contents:</h4>
+                <ul>
+                  <li>Dataset metadata and statistics</li>
+                  <li>Complete contribution data</li>
+                  <li>File references (files not included)</li>
+                  <li>All annotations and metadata</li>
+                </ul>
+              </div>
+              
+              <div *ngSwitchCase="'csv'" class="format-details">
+                <h4>CSV Export Contents:</h4>
+                <ul>
+                  <li *ngIf="data.dataset.dataType === 'structured'">Unified structured data table</li>
+                  <li *ngIf="data.dataset.dataType !== 'structured'">Contribution summary table</li>
+                  <li>Contributor information</li>
+                  <li>Validation status</li>
+                  <li>Basic metadata</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </form>
+      </mat-dialog-content>
+      
+      <mat-dialog-actions align="end">
+        <button mat-button (click)="onCancel()" [disabled]="isExporting">
+          Cancel
+        </button>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="onExport()"
+          [disabled]="exportForm.invalid || isExporting"
+        >
+          <mat-spinner diameter="20" *ngIf="isExporting"></mat-spinner>
+          <mat-icon *ngIf="!isExporting">download</mat-icon>
+          <span *ngIf="!isExporting">Export Dataset</span>
+          <span *ngIf="isExporting">Preparing Export...</span>
+        </button>
+      </mat-dialog-actions>
+    </div>

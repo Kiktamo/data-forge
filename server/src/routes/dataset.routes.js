@@ -99,6 +99,25 @@ const userIdValidation = [
     .withMessage('User ID must be a positive integer')
 ];
 
+// Export validation rules
+const exportValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Dataset ID must be a positive integer'),
+  query('format')
+    .optional()
+    .isIn(['json', 'csv', 'zip'])
+    .withMessage('Export format must be json, csv, or zip'),
+  query('includeRejected')
+    .optional()
+    .isBoolean()
+    .withMessage('includeRejected must be true or false'),
+  query('includePending')
+    .optional()
+    .isBoolean()
+    .withMessage('includePending must be true or false')
+];
+
 // Public routes (no authentication required, but can be enhanced with auth)
 router.get('/', 
   optionalAuth, 
@@ -123,6 +142,12 @@ router.get('/:id/history',
   optionalAuth, 
   paginationValidation,
   datasetController.getDatasetHistory
+);
+
+router.get('/:id/export', 
+  exportValidation,
+  optionalAuth, 
+  datasetController.exportDataset
 );
 
 router.get('/user/:userId', 

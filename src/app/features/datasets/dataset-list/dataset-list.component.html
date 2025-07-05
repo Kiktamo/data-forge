@@ -242,6 +242,15 @@
         <a mat-button color="primary" [routerLink]="['/datasets', dataset.id]">
           View Details
         </a>
+        <button
+          mat-button
+          color="accent"
+          (click)="exportDataset(dataset, $event)"
+          matTooltip="Export dataset"
+        >
+          <mat-icon>download</mat-icon>
+          Export
+        </button>
         <a
           mat-button
           color="accent"
