@@ -7,6 +7,7 @@ const User = require('../models/user.model');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
+const duplicateDetectionService = require('../services/duplicate-detection.service');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -379,6 +380,27 @@ if (req.file) {
         }]
       });
 
+      // New: Run duplicate detection service
+      let duplicateDetectionResult = null;
+      try {
+        console.log(`🔍 Running duplicate detection for contribution ${contribution.id}`);
+        duplicateDetectionResult = await duplicateDetectionService.checkForDuplicates(createdContribution);
+        
+        // Log results for monitoring
+        if (duplicateDetectionResult.hasDuplicates) {
+          console.log(`🚨 Found ${duplicateDetectionResult.duplicates.length} potential duplicates for contribution ${contribution.id}`);
+        } else if (duplicateDetectionResult.hasWarnings) {
+          console.log(`⚠️ Found ${duplicateDetectionResult.warnings.length} similar contributions for contribution ${contribution.id}`);
+        } else {
+          console.log(`✅ No duplicates found for contribution ${contribution.id}`);
+        }
+        
+      } catch (duplicateError) {
+        console.error('❌ Duplicate detection failed (continuing without):', duplicateError);
+        // Don't fail the contribution creation if duplicate detection fails
+      }
+
+      // Notify via WebSocket if available
       // Notify via WebSocket if available
       const { wsService } = require('../index');
       if (wsService && typeof wsService === 'function') {
@@ -386,16 +408,36 @@ if (req.file) {
         if (ws) {
           ws.notifyDatasetUpdate(datasetId, 'contribution_added', {
             contributionId: contribution.id,
-            contributorName: req.user.username
+            contributorName: req.user.username,
+            duplicateDetection: duplicateDetectionResult ? {
+              hasDuplicates: duplicateDetectionResult.hasDuplicates,
+              hasWarnings: duplicateDetectionResult.hasWarnings,
+              duplicateCount: duplicateDetectionResult.duplicates?.length || 0,
+              warningCount: duplicateDetectionResult.warnings?.length || 0
+            } : null
           });
         }
       }
 
-      res.status(201).json({
+// Return response with duplicate detection results
+      const response = {
         success: true,
         message: 'Contribution created successfully',
-        data: { contribution: createdContribution.toSafeObject() }
-      });
+        data: { 
+          contribution: createdContribution.toSafeObject(),
+          duplicateDetection: duplicateDetectionResult ? {
+            hasDuplicates: duplicateDetectionResult.hasDuplicates,
+            hasWarnings: duplicateDetectionResult.hasWarnings,
+            duplicates: duplicateDetectionResult.duplicates || [],
+            warnings: duplicateDetectionResult.warnings || [],
+            // Don't expose the full embedding data to frontend
+            embeddingGenerated: !!duplicateDetectionResult.embedding
+          } : null
+        }
+      };
+
+      res.status(201).json(response);
+      
     } catch (error) {
       console.error('Error creating contribution:', error);
       res.status(500).json({

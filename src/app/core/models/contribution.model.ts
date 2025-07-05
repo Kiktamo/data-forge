@@ -32,4 +32,18 @@ export interface Contribution {
     visibility: string;
     ownerId?: number;
   };
+  
+  // Duplicate detection data (added by enhanced API endpoints)
+  duplicateDetection?: {
+    hasEmbedding: boolean;
+    similarCount?: number;
+    highSimilarityCount?: number;
+    topSimilarities?: Array<{
+      contributionId: number;
+      similarity: number;
+      contentExcerpt: string;
+    }>;
+    error?: string;
+    message?: string;
+  };
 }

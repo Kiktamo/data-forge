@@ -123,13 +123,31 @@ Contribution.prototype.toSafeObject = function() {
     visibility: this.dataset.visibility
   } : null;
   
-  return {
+  let duplicateDetection = null;
+  if (this.embedding) {
+    duplicateDetection = {
+      hasEmbedding: true,
+      contentExcerpt: this.embedding.contentExcerpt,
+      extractedAt: this.embedding.extractedAt,
+      embeddingModel: this.embedding.embeddingModel
+    };
+  } else if (this.duplicateDetection) {
+    duplicateDetection = this.duplicateDetection;
+  }
+  
+  const baseObject = {
     id, datasetId, contributorId, dataType, content, metadata,
     validationStatus, validatedBy, validationNotes, qualityScore,
     isActive, created_at, updated_at,
     contributor: contributorData,
     dataset: datasetData
   };
+  
+  if (duplicateDetection) {
+    baseObject.duplicateDetection = duplicateDetection;
+  }
+  
+  return baseObject;
 };
 
 // Static method to get contributions with contributor information

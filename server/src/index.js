@@ -17,9 +17,50 @@ const authRoutes = require('./routes/auth.routes');
 const datasetRoutes = require('./routes/dataset.routes');
 const contributionRoutes = require('./routes/contribution.routes');
 const fileRoutes = require('./routes/file.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 // Import WebSocket service
 const WebSocketService = require('./services/websocket.service');
+
+// Import duplicate detection service
+// This service can be used to check for duplicate contributions
+const duplicateDetectionService = require('./services/duplicate-detection.service');
+
+const initializeEmbeddings = async () => {
+  try {
+    console.log('🔄 Initializing embedding system...');
+    
+    // Check if we need to process existing contributions
+    const ContributionEmbedding = require('./models/embedding.model');
+    const Contribution = require('./models/contribution.model');
+    
+    const totalContributions = await Contribution.count({ where: { isActive: true } });
+    const embeddedContributions = await ContributionEmbedding.count();
+    
+    console.log(`📊 Contributions: ${totalContributions} total, ${embeddedContributions} embedded`);
+    
+    if (totalContributions > embeddedContributions) {
+      const missingEmbeddings = totalContributions - embeddedContributions;
+      console.log(`⚠️ Found ${missingEmbeddings} contributions without embeddings`);
+      
+      // Only auto-process if it's a reasonable number (avoid overwhelming on first startup)
+      if (missingEmbeddings <= 100) {
+        console.log('🚀 Auto-processing missing embeddings...');
+        const result = await duplicateDetectionService.processExistingContributions();
+        console.log(`✅ Embedding initialization complete: ${result.processed} processed, ${result.skipped} skipped`);
+      } else {
+        console.log('⏸️ Too many missing embeddings for auto-processing. Use the admin endpoint to process manually.');
+        console.log('   POST /api/admin/embeddings/process');
+      }
+    } else {
+      console.log('✅ All contributions have embeddings');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error initializing embeddings:', error);
+    // Don't fail server startup if embeddings fail
+  }
+};
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -83,9 +124,11 @@ app.get('/health', (req, res) => {
 
 // API Routes - IMPORTANT: Order matters!
 app.use('/api/auth', authRoutes);
+// app.use('/api/admin', adminRoutes);
 app.use('/api/files', fileRoutes); // File serving with access control - put this BEFORE datasets
 app.use('/api/datasets', datasetRoutes);
 app.use('/api', contributionRoutes); // This registers /api/datasets/:id/contributions
+
 
 // Debug: Log all registered routes (remove in production)
 console.log('🛣️ Registered API routes:');
@@ -126,9 +169,16 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully.');
 
+    // Enable PostgreSQL vector extension if not already enabled
+    await sequelize.query('CREATE EXTENSION IF NOT EXISTS vector');
+    console.log('✅ PostgreSQL vector extension enabled.');
+
     // Sync models (use { force: false } in production)
     await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
     console.log('✅ Database models synchronized.');
+
+    // Initialize embeddings AFTER database is ready
+    await initializeEmbeddings();
 
     // Initialize WebSocket service
     wsService = new WebSocketService(server);

@@ -5,6 +5,7 @@ const User = require('./user.model');
 const Dataset = require('./dataset.model');
 const Contribution = require('./contribution.model');
 const Validation = require('./validation.model');
+const ContributionEmbedding = require('./embedding.model');
 
 // Define associations
 
@@ -51,6 +52,11 @@ Contribution.hasMany(Validation, {
   as: 'validations'
 });
 
+Contribution.hasOne(ContributionEmbedding, {
+  foreignKey: 'contributionId',
+  as: 'embedding'
+});
+
 // Validation associations
 Validation.belongsTo(User, {
   foreignKey: 'validatorId',
@@ -62,13 +68,20 @@ Validation.belongsTo(Contribution, {
   as: 'contribution'
 });
 
+// ContributionEmbedding associations
+ContributionEmbedding.belongsTo(Contribution, {
+  foreignKey: 'contributionId',
+  as: 'contribution'
+});
+
 // Export all models and sequelize instance
 module.exports = {
   sequelize,
   User,
   Dataset,
   Contribution,
-  Validation
+  Validation,
+  ContributionEmbedding
 };
 
 // Also export individual models for backward compatibility
@@ -76,3 +89,4 @@ module.exports.User = User;
 module.exports.Dataset = Dataset;
 module.exports.Contribution = Contribution;
 module.exports.Validation = Validation;
+module.exports.ContributionEmbedding = ContributionEmbedding;

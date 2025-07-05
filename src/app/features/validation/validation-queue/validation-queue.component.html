@@ -256,6 +256,102 @@
           </div>
         </div>
 
+        <div
+          class="duplicate-detection-section"
+          *ngIf="contribution.duplicateDetection?.hasEmbedding"
+        >
+          <!-- High similarity warning -->
+          <div
+            class="duplicate-alert warning"
+            *ngIf="
+              contribution.duplicateDetection.highSimilarityCount &&
+              contribution.duplicateDetection.highSimilarityCount > 0
+            "
+          >
+            <mat-icon>warning</mat-icon>
+            <div class="alert-content">
+              <span class="alert-title">Potential Duplicates Detected</span>
+              <span class="alert-message">
+                {{ contribution.duplicateDetection.highSimilarityCount }} highly
+                similar contribution(s) found
+              </span>
+            </div>
+            <button
+              mat-icon-button
+              (click)="viewSimilarContributions(contribution)"
+              matTooltip="View similar contributions"
+            >
+              <mat-icon>visibility</mat-icon>
+            </button>
+          </div>
+
+          <!-- Medium similarity info -->
+          <div
+            class="duplicate-alert info"
+            *ngIf="
+              contribution.duplicateDetection.similarCount &&
+              contribution.duplicateDetection.similarCount > 0 &&
+              (!contribution.duplicateDetection.highSimilarityCount ||
+                contribution.duplicateDetection.highSimilarityCount === 0)
+            "
+          >
+            <mat-icon>info</mat-icon>
+            <div class="alert-content">
+              <span class="alert-title">Similar Contributions Found</span>
+              <span class="alert-message">
+                {{ contribution.duplicateDetection.similarCount }} similar
+                contribution(s) detected
+              </span>
+            </div>
+            <button
+              mat-icon-button
+              (click)="viewSimilarContributions(contribution)"
+              matTooltip="View similar contributions"
+            >
+              <mat-icon>visibility</mat-icon>
+            </button>
+          </div>
+
+          <!-- No duplicates (good to validate) -->
+          <div
+            class="duplicate-alert success"
+            *ngIf="contribution.duplicateDetection.similarCount === 0"
+          >
+            <mat-icon>check_circle</mat-icon>
+            <div class="alert-content">
+              <span class="alert-title">Unique Contribution</span>
+              <span class="alert-message"
+                >No similar contributions detected</span
+              >
+            </div>
+          </div>
+
+          <!-- Embedding processing status -->
+          <div
+            class="embedding-status"
+            *ngIf="contribution.duplicateDetection.message"
+          >
+            <mat-icon>info_outline</mat-icon>
+            <span>{{ contribution.duplicateDetection.message }}</span>
+          </div>
+        </div>
+
+        <!-- Error state for duplicate detection -->
+        <div
+          class="duplicate-detection-section"
+          *ngIf="contribution.duplicateDetection?.error"
+        >
+          <div class="duplicate-alert error">
+            <mat-icon>error</mat-icon>
+            <div class="alert-content">
+              <span class="alert-title">Duplicate Detection Error</span>
+              <span class="alert-message">{{
+                contribution.duplicateDetection.error
+              }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Validation Form -->
         <mat-expansion-panel
           [expanded]="expandedContribution === contribution.id"

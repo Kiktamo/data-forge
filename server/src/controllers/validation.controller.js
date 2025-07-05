@@ -5,6 +5,7 @@ const Contribution = require('../models/contribution.model');
 const Dataset = require('../models/dataset.model');
 const User = require('../models/user.model');
 const emailService = require('../services/email.service');
+const ContributionEmbedding = require('../models/embedding.model');
 
 // Create validation for a contribution
 exports.createValidation = async (req, res) => {
@@ -472,6 +473,13 @@ exports.getPendingContributions = async (req, res) => {
               { ownerId: req.user.id }
             ]
           }
+        },
+        // New: Include embedding data for duplicate detection
+        {
+          model: ContributionEmbedding,
+          as: 'embedding',
+          required: false, // LEFT JOIN - some contributions might not have embeddings yet
+          attributes: ['id', 'embedding', 'contentExcerpt', 'extractedAt', 'embeddingModel']
         }
       ],
       limit: parseInt(limit),
@@ -480,6 +488,54 @@ exports.getPendingContributions = async (req, res) => {
       distinct: true
     });
 
+    // New: Enhance contributions with duplicate detection information
+    const enhancedContributions = [];
+    
+    for (const contribution of contributions) {
+      const contributionData = contribution.toSafeObject();
+      
+      // Add duplicate detection info if embedding exists
+      if (contribution.embedding && contribution.embedding.embedding) {
+        try {
+          // Find similar contributions for this one
+          const similarContributions = await ContributionEmbedding.findSimilar(
+            JSON.parse(contribution.embedding.embedding), // Parse vector from database
+            {
+              limit: 5,
+              threshold: 0.75, // Warning threshold
+              excludeContributionId: contribution.id,
+              datasetId: contribution.datasetId
+            }
+          );
+
+          contributionData.duplicateDetection = {
+            hasEmbedding: true,
+            similarCount: similarContributions.length,
+            highSimilarityCount: similarContributions.filter(s => s.similarity >= 0.85).length,
+            topSimilarities: similarContributions.slice(0, 3).map(s => ({
+              contributionId: s.contribution_id,
+              similarity: Math.round(s.similarity * 100) / 100,
+              contentExcerpt: s.content_excerpt?.substring(0, 100) + '...'
+            }))
+          };
+          
+        } catch (duplicateError) {
+          console.error(`Error checking duplicates for contribution ${contribution.id}:`, duplicateError);
+          contributionData.duplicateDetection = {
+            hasEmbedding: true,
+            error: 'Could not check for duplicates'
+          };
+        }
+      } else {
+        contributionData.duplicateDetection = {
+          hasEmbedding: false,
+          message: 'Embedding not generated yet'
+        };
+      }
+      
+      enhancedContributions.push(contributionData);
+    }
+
     const totalPages = Math.ceil(count / limit);
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
@@ -487,7 +543,7 @@ exports.getPendingContributions = async (req, res) => {
     res.json({
       success: true,
       data: {
-        contributions: contributions.map(c => c.toSafeObject()),
+        contributions: enhancedContributions, // Return enhanced data
         pagination: {
           currentPage: parseInt(page),
           totalPages,

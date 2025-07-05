@@ -19,13 +19,26 @@ export interface ContributionListResponse {
   };
 }
 
-export interface ContributionResponse {
+interface DuplicateResult {
+  contributionId: number;
+  similarity: number;
+  contribution: Contribution;
+  contentExcerpt: string;
+}
+
+interface ContributionResponse {
   success: boolean;
+  message: string;
   data: {
     contribution: Contribution;
-    validationSummary?: ValidationSummary;
+    duplicateDetection?: {
+      hasDuplicates: boolean;
+      hasWarnings: boolean;
+      duplicates: DuplicateResult[];
+      warnings: DuplicateResult[];
+      embeddingGenerated: boolean;
+    };
   };
-  message?: string;
 }
 
 export interface ValidationSummary {
