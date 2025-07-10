@@ -189,7 +189,7 @@ export class ValidationQueueComponent implements OnInit, OnDestroy {
   // Load validation statistics
   loadValidationStats(): void {
     // This would be implemented with a dedicated stats endpoint
-    // For now, we'll use placeholder values
+    // For now, I'll use placeholder values
     this.validatedToday = 0; // Would come from API
   }
 

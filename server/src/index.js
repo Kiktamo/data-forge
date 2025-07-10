@@ -124,7 +124,7 @@ app.get('/health', (req, res) => {
 
 // API Routes - IMPORTANT: Order matters!
 app.use('/api/auth', authRoutes);
-// app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/files', fileRoutes); // File serving with access control - put this BEFORE datasets
 app.use('/api/datasets', datasetRoutes);
 app.use('/api', contributionRoutes); // This registers /api/datasets/:id/contributions

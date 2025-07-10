@@ -3,6 +3,10 @@ const { param, query } = require('express-validator');
 const { authenticate } = require('../middlewares/auth.middleware');
 const duplicateDetectionService = require('../services/duplicate-detection.service');
 
+const User = require('../models/user.model');
+const Contribution = require('../models/contribution.model');
+const { Op } = require('sequelize');
+
 const router = express.Router();
 
 // Middleware to check admin role
@@ -179,6 +183,58 @@ router.get('/embeddings/status', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get embedding status',
+      error: error.message
+    });
+  }
+});
+
+// Get user statistics
+router.get('/users/stats', async (req, res) => {
+  try {
+    // Get basic user counts
+    const totalUsers = await User.count({ where: { isActive: true } });
+    
+    // Users who have logged in within the last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const activeUsers = await User.count({
+      where: {
+        isActive: true,
+        lastLogin: { [Op.gte]: thirtyDaysAgo }
+      }
+    });
+
+    // Users created in the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const newUsersThisWeek = await User.count({
+      where: {
+        isActive: true,
+        created_at: { [Op.gte]: sevenDaysAgo }
+      }
+    });
+
+    // Get rejected contributions count
+    const rejectedContributions = await Contribution.count({
+      where: {
+        validationStatus: 'rejected',
+        isActive: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalUsers,
+        activeUsers,
+        newUsersThisWeek,
+        rejectedContributions
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting user stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get user statistics',
       error: error.message
     });
   }

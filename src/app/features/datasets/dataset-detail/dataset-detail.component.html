@@ -286,10 +286,11 @@
                 <mat-icon>history</mat-icon>
                 Recent Activity
               </h3>
-              <div class="activity-placeholder">
-                <mat-icon>timeline</mat-icon>
-                <p>Activity timeline coming soon</p>
-              </div>
+              <app-dataset-activity-timeline
+                [dataset]="dataset"
+                [maxItems]="10"
+              >
+              </app-dataset-activity-timeline>
             </div>
           </div>
         </mat-tab>
@@ -379,10 +380,11 @@
                   </mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
-                  <div class="insights-placeholder">
-                    <mat-icon>analytics</mat-icon>
-                    <p>Advanced analytics and quality metrics coming soon</p>
-                  </div>
+                  <app-dataset-analytics
+                    [dataset]="dataset"
+                    [showFullAnalytics]="true"
+                  >
+                  </app-dataset-analytics>
                 </mat-card-content>
               </mat-card>
             </div>
@@ -553,7 +555,9 @@
                       [ngClass]="contribution.validationStatus"
                     >
                       <span>{{
-                        getContributionStatusLabel(contribution.validationStatus)
+                        getContributionStatusLabel(
+                          contribution.validationStatus
+                        )
                       }}</span>
                     </div>
                   </div>
@@ -654,7 +658,9 @@
                     </div>
                     <div class="meta-item">
                       <mat-icon>schedule</mat-icon>
-                      <span>{{ contribution.created_at | date : "short" }}</span>
+                      <span>{{
+                        contribution.created_at | date : "short"
+                      }}</span>
                     </div>
                     <div class="meta-item" *ngIf="contribution.qualityScore">
                       <mat-icon>star</mat-icon>

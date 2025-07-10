@@ -28,6 +28,8 @@ import { PresenceIndicatorComponent } from '../../../core/components/presence-in
 import { Contribution } from '../../../core/models/contribution.model';
 import { ContributionService } from '../../../core/services/contribution.service';
 import { ExportDialogComponent } from '../../../core/components/export-dialog/export-dialog.component';
+import { DatasetAnalyticsComponent } from '../dataset-analytics/dataset-analytics.component';
+import { DatasetActivityTimelineComponent } from '../dataset-activity-timeline/dataset-activity-timeline.component';
 
 
 interface DatasetStats {
@@ -76,7 +78,8 @@ interface DatasetHistoryItem {
     MatPaginatorModule,
     MatSelectModule,
     MatFormFieldModule,
-    
+    DatasetAnalyticsComponent,
+    DatasetActivityTimelineComponent
   ],
   templateUrl: './dataset-detail.component.html',
   styleUrls: ['./dataset-detail.component.scss']

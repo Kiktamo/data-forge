@@ -1,0 +1,448 @@
+<div class="dataset-analytics-container">
+
+  <!-- Loading State -->
+  <div class="analytics-loading" *ngIf="isLoading">
+    <mat-spinner diameter="30"></mat-spinner>
+    <p>Loading analytics...</p>
+  </div>
+
+  <!-- Analytics Content -->
+  <div class="analytics-content" *ngIf="!isLoading && analytics">
+
+    <!-- Summary Cards (always shown) -->
+    <div class="analytics-summary">
+      <div class="summary-grid">
+        
+        <!-- Quality Score -->
+        <mat-card class="analytics-card quality-card">
+          <mat-card-content>
+            <div class="metric-header">
+              <mat-icon>stars</mat-icon>
+              <span class="metric-title">Quality Score</span>
+            </div>
+            <div class="metric-value" [ngClass]="getQualityScoreColor(analytics.qualityMetrics.overallScore)">
+              {{ analytics.qualityMetrics.overallScore | number:'1.0-0' }}%
+            </div>
+            <div class="metric-progress">
+              <mat-progress-bar 
+                mode="determinate" 
+                [value]="analytics.qualityMetrics.overallScore"
+                [color]="getQualityScoreColor(analytics.qualityMetrics.overallScore)">
+              </mat-progress-bar>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Validation Rate -->
+        <mat-card class="analytics-card validation-card">
+          <mat-card-content>
+            <div class="metric-header">
+              <mat-icon>verified</mat-icon>
+              <span class="metric-title">Validation Rate</span>
+            </div>
+            <div class="metric-value" [ngClass]="getQualityScoreColor(analytics.qualityMetrics.validationRate)">
+              {{ analytics.qualityMetrics.validationRate | number:'1.0-0' }}%
+            </div>
+            <div class="metric-details">
+              <span class="detail-text">
+                {{ analytics.validationMetrics.pendingCount }} pending validation
+              </span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Duplicate Detection -->
+        <mat-card class="analytics-card duplicates-card">
+          <mat-card-content>
+            <div class="metric-header">
+              <mat-icon>content_copy</mat-icon>
+              <span class="metric-title">Duplicate Rate</span>
+              <mat-spinner *ngIf="isLoadingDuplicates" diameter="16"></mat-spinner>
+            </div>
+            <div class="metric-value" [ngClass]="getDuplicateRateColor(analytics.duplicateAnalysis.duplicateRate)">
+              {{ analytics.duplicateAnalysis.duplicateRate | number:'1.1-1' }}%
+            </div>
+            <div class="metric-details">
+              <span class="detail-text">
+                {{ analytics.duplicateAnalysis.totalDuplicates }} potential duplicates
+              </span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Contributors -->
+        <mat-card class="analytics-card contributors-card">
+          <mat-card-content>
+            <div class="metric-header">
+              <mat-icon>people</mat-icon>
+              <span class="metric-title">Contributors</span>
+            </div>
+            <div class="metric-value primary">
+              {{ analytics.contributorStats.totalContributors }}
+            </div>
+            <div class="metric-details">
+              <span class="detail-text">
+                {{ analytics.contributorStats.activeContributors }} active
+              </span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </div>
+
+    <!-- Detailed Analytics (shown when showFullAnalytics is true) -->
+    <div class="detailed-analytics" *ngIf="showFullAnalytics">
+      
+      <mat-tab-group>
+        
+        <!-- Quality Analysis -->
+        <mat-tab label="Quality Analysis">
+          <div class="tab-content">
+            
+            <!-- Quality Metrics Grid -->
+            <div class="quality-metrics-grid">
+              
+              <mat-card class="detail-card">
+                <mat-card-header>
+                  <mat-card-title>
+                    <mat-icon>assessment</mat-icon>
+                    Data Quality Breakdown
+                  </mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  
+                  <div class="quality-breakdown">
+                    <div class="quality-item">
+                      <span class="quality-label">Validation Rate</span>
+                      <div class="quality-bar">
+                        <mat-progress-bar 
+                          mode="determinate" 
+                          [value]="analytics.qualityMetrics.validationRate"
+                          color="primary">
+                        </mat-progress-bar>
+                        <span class="quality-value">{{ formatPercentage(analytics.qualityMetrics.validationRate) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="quality-item">
+                      <span class="quality-label">Data Completeness</span>
+                      <div class="quality-bar">
+                        <mat-progress-bar 
+                          mode="determinate" 
+                          [value]="analytics.qualityMetrics.dataCompleteness"
+                          color="accent">
+                        </mat-progress-bar>
+                        <span class="quality-value">{{ formatPercentage(analytics.qualityMetrics.dataCompleteness) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="quality-item">
+                      <span class="quality-label">Contributor Diversity</span>
+                      <div class="quality-bar">
+                        <mat-progress-bar 
+                          mode="determinate" 
+                          [value]="analytics.qualityMetrics.contributorDiversity"
+                          color="warn">
+                        </mat-progress-bar>
+                        <span class="quality-value">{{ formatPercentage(analytics.qualityMetrics.contributorDiversity) }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card class="detail-card">
+                <mat-card-header>
+                  <mat-card-title>
+                    <mat-icon>schedule</mat-icon>
+                    Validation Performance
+                  </mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  
+                  <div class="performance-stats">
+                    <div class="perf-stat">
+                      <div class="perf-value">{{ formatTime(analytics.qualityMetrics.averageValidationTime) }}</div>
+                      <div class="perf-label">Avg. Validation Time</div>
+                    </div>
+
+                    <div class="perf-stat">
+                      <div class="perf-value">{{ formatPercentage(analytics.validationMetrics.consensusRate) }}</div>
+                      <div class="perf-label">Consensus Rate</div>
+                    </div>
+
+                    <div class="perf-stat">
+                      <div class="perf-value">{{ analytics.validationMetrics.pendingCount }}</div>
+                      <div class="perf-label">Pending Reviews</div>
+                    </div>
+                  </div>
+
+                </mat-card-content>
+              </mat-card>
+
+            </div>
+
+          </div>
+        </mat-tab>
+
+        <!-- Bias Detection -->
+        <mat-tab label="Bias Detection">
+          <div class="tab-content">
+            
+            <mat-card class="detail-card bias-analysis">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon>balance</mat-icon>
+                  Bias Analysis
+                </mat-card-title>
+                <mat-card-subtitle>
+                  Automated analysis of potential biases in your dataset
+                </mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                
+                <!-- Overall Bias Score -->
+                <div class="bias-score-section">
+                  <div class="bias-score-header">
+                    <h3>Overall Bias Score</h3>
+                    <div class="bias-score" [ngClass]="getBiasScoreColor(analytics.biasDetection.overallBiasScore)">
+                      {{ analytics.biasDetection.overallBiasScore }}/100
+                    </div>
+                  </div>
+                  
+                  <mat-progress-bar 
+                    mode="determinate" 
+                    [value]="analytics.biasDetection.overallBiasScore"
+                    [color]="getBiasScoreColor(analytics.biasDetection.overallBiasScore)"
+                    class="bias-progress">
+                  </mat-progress-bar>
+                  
+                  <p class="bias-description">
+                    <span *ngIf="analytics.biasDetection.overallBiasScore >= 80" class="bias-good">
+                      Excellent: Your dataset shows good diversity and low bias indicators.
+                    </span>
+                    <span *ngIf="analytics.biasDetection.overallBiasScore >= 60 && analytics.biasDetection.overallBiasScore < 80" class="bias-moderate">
+                      Good: Some areas for improvement in diversity and representation.
+                    </span>
+                    <span *ngIf="analytics.biasDetection.overallBiasScore < 60" class="bias-poor">
+                      Needs Attention: Significant bias indicators detected. Review recommendations below.
+                    </span>
+                  </p>
+                </div>
+
+                <mat-divider></mat-divider>
+
+                <!-- Content Diversity -->
+                <div class="diversity-section">
+                  <h4>Content Diversity: {{ formatPercentage(analytics.biasDetection.contentDiversity) }}</h4>
+                  <mat-progress-bar 
+                    mode="determinate" 
+                    [value]="analytics.biasDetection.contentDiversity"
+                    color="accent">
+                  </mat-progress-bar>
+                </div>
+
+                <mat-divider></mat-divider>
+
+                <!-- Recommendations -->
+                <div class="recommendations-section">
+                  <h4>
+                    <mat-icon>lightbulb</mat-icon>
+                    Recommendations
+                  </h4>
+                  <ul class="recommendations-list">
+                    <li *ngFor="let recommendation of analytics.biasDetection.recommendations">
+                      {{ recommendation }}
+                    </li>
+                  </ul>
+                </div>
+
+              </mat-card-content>
+            </mat-card>
+
+          </div>
+        </mat-tab>
+
+        <!-- Duplicate Analysis -->
+        <mat-tab label="Duplicate Analysis">
+          <div class="tab-content">
+            
+            <mat-card class="detail-card">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon>content_copy</mat-icon>
+                  Duplicate Detection Report
+                </mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                
+                <div class="duplicate-stats-grid">
+                  <div class="duplicate-stat">
+                    <div class="stat-icon">
+                      <mat-icon>warning</mat-icon>
+                    </div>
+                    <div class="stat-content">
+                      <div class="stat-value">{{ analytics.duplicateAnalysis.totalDuplicates }}</div>
+                      <div class="stat-label">Total Duplicates</div>
+                    </div>
+                  </div>
+
+                  <div class="duplicate-stat">
+                    <div class="stat-icon">
+                      <mat-icon>priority_high</mat-icon>
+                    </div>
+                    <div class="stat-content">
+                      <div class="stat-value">{{ analytics.duplicateAnalysis.highSimilarityPairs }}</div>
+                      <div class="stat-label">High Similarity (>90%)</div>
+                    </div>
+                  </div>
+
+                  <div class="duplicate-stat">
+                    <div class="stat-icon">
+                      <mat-icon>psychology</mat-icon>
+                    </div>
+                    <div class="stat-content">
+                      <div class="stat-value">{{ formatPercentage(analytics.duplicateAnalysis.embeddingCoverage) }}</div>
+                      <div class="stat-label">Embedding Coverage</div>
+                    </div>
+                  </div>
+
+                  <div class="duplicate-stat">
+                    <div class="stat-icon">
+                      <mat-icon>percent</mat-icon>
+                    </div>
+                    <div class="stat-content">
+                      <div class="stat-value">{{ analytics.duplicateAnalysis.duplicateRate | number:'1.1-1' }}%</div>
+                      <div class="stat-label">Duplicate Rate</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="duplicate-insights">
+                  <h4>Insights</h4>
+                  <div class="insight-item" *ngIf="analytics.duplicateAnalysis.duplicateRate <= 5">
+                    <mat-icon class="insight-icon good">check_circle</mat-icon>
+                    <span>Low duplicate rate indicates good data quality and contributor diversity.</span>
+                  </div>
+                  <div class="insight-item" *ngIf="analytics.duplicateAnalysis.duplicateRate > 5 && analytics.duplicateAnalysis.duplicateRate <= 15">
+                    <mat-icon class="insight-icon warning">warning</mat-icon>
+                    <span>Moderate duplicate rate. Consider reviewing contribution guidelines.</span>
+                  </div>
+                  <div class="insight-item" *ngIf="analytics.duplicateAnalysis.duplicateRate > 15">
+                    <mat-icon class="insight-icon error">error</mat-icon>
+                    <span>High duplicate rate. Review and remove duplicates to improve dataset quality.</span>
+                  </div>
+                </div>
+
+              </mat-card-content>
+            </mat-card>
+
+          </div>
+        </mat-tab>
+
+        <!-- Contributors -->
+        <mat-tab label="Contributors">
+          <div class="tab-content">
+            
+            <div class="contributors-overview">
+              
+              <mat-card class="detail-card">
+                <mat-card-header>
+                  <mat-card-title>
+                    <mat-icon>people</mat-icon>
+                    Contributor Statistics
+                  </mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  
+                  <div class="contributor-stats-grid">
+                    <div class="contributor-stat">
+                      <div class="stat-number">{{ analytics.contributorStats.totalContributors }}</div>
+                      <div class="stat-label">Total Contributors</div>
+                    </div>
+
+                    <div class="contributor-stat">
+                      <div class="stat-number">{{ analytics.contributorStats.activeContributors }}</div>
+                      <div class="stat-label">Active Contributors</div>
+                    </div>
+
+                    <div class="contributor-stat">
+                      <div class="stat-number">
+                        {{ analytics.contributorStats.totalContributors > 0 ? 
+                            ((dataset.contributionCount || 0) / analytics.contributorStats.totalContributors | number:'1.1-1') : 
+                            0 }}
+                      </div>
+                      <div class="stat-label">Avg. Contributions per User</div>
+                    </div>
+                  </div>
+
+                </mat-card-content>
+              </mat-card>
+
+              <!-- Top Contributors would go here if data available -->
+              <mat-card class="detail-card" *ngIf="analytics.contributorStats.topContributors.length > 0">
+                <mat-card-header>
+                  <mat-card-title>
+                    <mat-icon>star</mat-icon>
+                    Top Contributors
+                  </mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  
+                  <div class="top-contributors-list">
+                    <div *ngFor="let contributor of analytics.contributorStats.topContributors.slice(0, 5); let i = index" 
+                         class="contributor-item">
+                      
+                      <div class="contributor-rank">
+                        <mat-icon *ngIf="i === 0" class="rank-icon gold">emoji_events</mat-icon>
+                        <mat-icon *ngIf="i === 1" class="rank-icon silver">emoji_events</mat-icon>
+                        <mat-icon *ngIf="i === 2" class="rank-icon bronze">emoji_events</mat-icon>
+                        <span *ngIf="i > 2" class="rank-number">#{{ i + 1 }}</span>
+                      </div>
+
+                      <div class="contributor-info">
+                        <div class="contributor-name">{{ contributor.username }}</div>
+                        <div class="contributor-stats">
+                          {{ contributor.contributionCount }} contributions • 
+                          {{ formatPercentage(contributor.validationRate) }} validation rate
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </mat-card-content>
+              </mat-card>
+
+            </div>
+
+          </div>
+        </mat-tab>
+
+      </mat-tab-group>
+
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="analytics-actions" *ngIf="!showFullAnalytics">
+      <button mat-button color="primary" (click)="refreshAnalytics()">
+        <mat-icon>refresh</mat-icon>
+        Refresh Analytics
+      </button>
+    </div>
+
+  </div>
+
+  <!-- No Data State -->
+  <div class="no-analytics" *ngIf="!isLoading && !analytics">
+    <mat-icon>analytics</mat-icon>
+    <h3>Analytics Unavailable</h3>
+    <p>Analytics data is not available for this dataset. Try refreshing or contact support.</p>
+    <button mat-raised-button color="primary" (click)="loadAnalytics()">
+      Retry Loading
+    </button>
+  </div>
+
+</div>
