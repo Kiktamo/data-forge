@@ -92,6 +92,7 @@ getContributionsByDataset(datasetId: number, params: ContributionQueryParams = {
   
   return this.http.get<ContributionListResponse>(`${this.apiUrl}/datasets/${datasetId}/contributions`, { params: params as any }).pipe(
     map(response => {
+      // console.log('Contributions for dataset response:', response);
       
       // Process each contribution to handle date fields
       response.data.contributions = response.data.contributions.map(contribution => 
@@ -108,6 +109,7 @@ getContributionById(id: number): Observable<ContributionResponse> {
   
   return this.http.get<ContributionResponse>(`${this.apiUrl}/contributions/${id}`).pipe(
     map(response => {
+      console.log('Single contribution response:', response);
       
       if (response.data.contribution) {
         response.data.contribution = this.processContributionResponse(response.data.contribution);

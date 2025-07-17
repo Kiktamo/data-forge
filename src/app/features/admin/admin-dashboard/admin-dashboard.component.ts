@@ -186,7 +186,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   loadSystemStats(): void {
     this.isLoadingStats = true;
 
-    // Get basic user count from backend - we'll need to add this endpoint
+    // Get basic user count from backend - I'll need to add this endpoint
     // For now, combine with existing dataset and contribution calls
     forkJoin({
       datasets: this.datasetService.getDatasets({ limit: 1000 }), // Get all datasets for analysis
@@ -293,7 +293,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.isLoadingQuality = true;
 
     // This would be a custom endpoint that aggregates quality data
-    // For now, we'll derive it from existing dataset data
+    // For now, I'll derive it from existing dataset data
     this.datasetService.getDatasets({ limit: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({

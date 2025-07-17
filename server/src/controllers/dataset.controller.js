@@ -778,8 +778,8 @@ exports.getDatasetStats = async (req, res) => {
       pendingValidations: pendingContributions,
       rejectedContributions: rejectedContributions,
       currentVersion: dataset.currentVersion,
-      created_at: dataset.created_at,
-      lastUpdated: dataset.updated_at,
+      created_at: dataset.createdAt,
+      lastUpdated: dataset.updatedAt,
       tags: dataset.tags,
       dataType: dataset.dataType
     };

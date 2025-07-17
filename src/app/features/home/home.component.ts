@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Dataset } from '../../core/models/dataset.model';
 import { DatasetService } from '../../core/services/dataset.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -27,7 +28,9 @@ export class HomeComponent implements OnInit {
   featuredDatasets: Dataset[] = [];
   isLoadingFeatured = false;
   
-  constructor(private datasetService: DatasetService) {}
+  constructor(
+    protected authService: AuthService,
+    private datasetService: DatasetService) {}
   
   ngOnInit(): void {
     this.loadFeaturedDatasets();

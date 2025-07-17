@@ -15,6 +15,7 @@ import { MatDividerModule } from '@angular/material/divider';
 
 import { Dataset } from '../../../core/models/dataset.model';
 import { DatasetService } from '../../../core/services/dataset.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environments';
 
@@ -78,10 +79,10 @@ interface DatasetAnalytics {
     MatBadgeModule,
     MatProgressSpinnerModule,
     MatTabsModule,
-    MatDividerModule
+    MatDividerModule,
   ],
   templateUrl: './dataset-analytics.component.html',
-  styleUrls: ['./dataset-analytics.component.scss']
+  styleUrls: ['./dataset-analytics.component.scss'],
 })
 export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
   @Input() dataset!: Dataset;
@@ -100,6 +101,7 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
 
   constructor(
     private datasetService: DatasetService,
+    protected authService: AuthService,
     private http: HttpClient
   ) {}
 
@@ -123,30 +125,35 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
       this.loadQualityMetrics(),
       this.loadDuplicateAnalysis(),
       this.loadContributorStats(),
-      this.loadValidationMetrics()
-    ]).then(() => {
-      this.isLoading = false;
-    }).catch(error => {
-      console.error('Error loading analytics:', error);
-      this.isLoading = false;
-    });
+      this.loadValidationMetrics(),
+    ])
+      .then(() => {
+        this.isLoading = false;
+      })
+      .catch((error) => {
+        console.error('Error loading analytics:', error);
+        this.isLoading = false;
+      });
   }
 
   private async loadQualityMetrics(): Promise<void> {
     try {
-      const stats = await this.datasetService.getDatasetStats(this.dataset.id).toPromise();
+      const stats = await this.datasetService
+        .getDatasetStats(this.dataset.id)
+        .toPromise();
       if (!this.analytics) this.analytics = this.getEmptyAnalytics();
-      
-      const validationRate = stats.totalContributions > 0 
-        ? (stats.validatedContributions / stats.totalContributions) * 100 
-        : 0;
+
+      const validationRate =
+        stats.totalContributions > 0
+          ? (stats.validatedContributions / stats.totalContributions) * 100
+          : 0;
 
       this.analytics.qualityMetrics = {
         overallScore: validationRate * 0.8, // Simplified calculation
         validationRate,
         averageValidationTime: 120, // Would come from validation data
         contributorDiversity: 75, // Placeholder - would need contributor analysis
-        dataCompleteness: validationRate
+        dataCompleteness: validationRate,
       };
     } catch (error) {
       console.error('Error loading quality metrics:', error);
@@ -155,18 +162,39 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
 
   private async loadDuplicateAnalysis(): Promise<void> {
     this.isLoadingDuplicates = true;
+
     try {
-      // Check if admin endpoint is available
-      const duplicateData = await this.http.get<any>(`${this.apiUrl}/admin/datasets/${this.dataset.id}/duplicates`).toPromise();
-      
-      if (!this.analytics) this.analytics = this.getEmptyAnalytics();
-      
-      this.analytics.duplicateAnalysis = {
-        totalDuplicates: duplicateData.data?.duplicatePairs?.length || 0,
-        duplicateRate: this.calculateDuplicateRate(duplicateData.data?.duplicatePairs?.length || 0),
-        highSimilarityPairs: duplicateData.data?.duplicatePairs?.filter((p: any) => p.similarity >= 0.9).length || 0,
-        embeddingCoverage: 85 // Would come from embedding status
-      };
+      // Check if user has admin role before making admin API call
+      if (this.authService.hasRole('admin')) {
+        const duplicateData = await this.http
+          .get<any>(
+            `${this.apiUrl}/admin/datasets/${this.dataset.id}/duplicates`
+          )
+          .toPromise();
+
+        if (!this.analytics) this.analytics = this.getEmptyAnalytics();
+
+        this.analytics.duplicateAnalysis = {
+          totalDuplicates: duplicateData.data?.duplicatePairs?.length || 0,
+          duplicateRate: this.calculateDuplicateRate(
+            duplicateData.data?.duplicatePairs?.length || 0
+          ),
+          highSimilarityPairs:
+            duplicateData.data?.duplicatePairs?.filter(
+              (p: any) => p.similarity >= 0.9
+            ).length || 0,
+          embeddingCoverage: 85, // Would come from embedding status
+        };
+      } else {
+        // For non-admin users, show placeholder or estimated data
+        if (!this.analytics) this.analytics = this.getEmptyAnalytics();
+        this.analytics.duplicateAnalysis = {
+          totalDuplicates: 0,
+          duplicateRate: 0,
+          highSimilarityPairs: 0,
+          embeddingCoverage: 0,
+        };
+      }
     } catch (error) {
       // Fallback if admin endpoint not accessible
       if (!this.analytics) this.analytics = this.getEmptyAnalytics();
@@ -174,7 +202,7 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
         totalDuplicates: 0,
         duplicateRate: 0,
         highSimilarityPairs: 0,
-        embeddingCoverage: 0
+        embeddingCoverage: 0,
       };
     }
     this.isLoadingDuplicates = false;
@@ -184,11 +212,11 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
     try {
       // This would need a dedicated endpoint - for now use placeholder data
       if (!this.analytics) this.analytics = this.getEmptyAnalytics();
-      
+
       this.analytics.contributorStats = {
         totalContributors: Math.floor(this.dataset.contributionCount * 0.7), // Estimate
         activeContributors: Math.floor(this.dataset.contributionCount * 0.3), // Estimate
-        topContributors: [] // Would need contribution data with contributor info
+        topContributors: [], // Would need contribution data with contributor info
       };
     } catch (error) {
       console.error('Error loading contributor stats:', error);
@@ -198,14 +226,16 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
   private async loadValidationMetrics(): Promise<void> {
     try {
       if (!this.analytics) this.analytics = this.getEmptyAnalytics();
-      
-      const pendingCount = (this.dataset.contributionCount || 0) - (this.dataset.validationCount || 0);
-      
+
+      const pendingCount =
+        (this.dataset.contributionCount || 0) -
+        (this.dataset.validationCount || 0);
+
       this.analytics.validationMetrics = {
         pendingCount,
         averageTimeToValidation: 24 * 60, // 24 hours in minutes - placeholder
         consensusRate: 85, // Placeholder
-        topValidators: [] // Would need validation data
+        topValidators: [], // Would need validation data
       };
 
       // Placeholder bias detection
@@ -216,8 +246,8 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
         recommendations: [
           'Consider adding more diverse data sources',
           'Review geographic distribution of contributions',
-          'Ensure balanced representation across categories'
-        ]
+          'Ensure balanced representation across categories',
+        ],
       };
     } catch (error) {
       console.error('Error loading validation metrics:', error);
@@ -231,41 +261,42 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
         validationRate: 0,
         averageValidationTime: 0,
         contributorDiversity: 0,
-        dataCompleteness: 0
+        dataCompleteness: 0,
       },
       contributionTrends: {
         daily: [],
         weekly: [],
-        monthly: []
+        monthly: [],
       },
       duplicateAnalysis: {
         totalDuplicates: 0,
         duplicateRate: 0,
         highSimilarityPairs: 0,
-        embeddingCoverage: 0
+        embeddingCoverage: 0,
       },
       contributorStats: {
         totalContributors: 0,
         activeContributors: 0,
-        topContributors: []
+        topContributors: [],
       },
       validationMetrics: {
         pendingCount: 0,
         averageTimeToValidation: 0,
         consensusRate: 0,
-        topValidators: []
+        topValidators: [],
       },
       biasDetection: {
         overallBiasScore: 0,
         demographicDistribution: {},
         contentDiversity: 0,
-        recommendations: []
-      }
+        recommendations: [],
+      },
     };
   }
 
   private calculateDuplicateRate(duplicateCount: number): number {
-    if (!this.dataset.contributionCount || this.dataset.contributionCount === 0) return 0;
+    if (!this.dataset.contributionCount || this.dataset.contributionCount === 0)
+      return 0;
     return (duplicateCount / this.dataset.contributionCount) * 100;
   }
 
@@ -293,7 +324,9 @@ export class DatasetAnalyticsComponent implements OnInit, OnDestroy {
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    return remainingMinutes > 0
+      ? `${hours}h ${remainingMinutes}m`
+      : `${hours}h`;
   }
 
   formatPercentage(value: number): string {

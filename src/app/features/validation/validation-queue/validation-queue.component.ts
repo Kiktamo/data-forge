@@ -7,7 +7,7 @@ import {
   FormGroup,
   Validators,
 } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { catchError, forkJoin, map, of, Subject, takeUntil } from 'rxjs';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -386,56 +386,93 @@ export class ValidationQueueComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Convert the similarity data to the format expected by the dialog
-    const duplicates = contribution.duplicateDetection.topSimilarities.map(
-      (similarity) => ({
-        contributionId: similarity.contributionId,
-        similarity: similarity.similarity,
-        contentExcerpt: similarity.contentExcerpt,
-        contribution: {
-          id: similarity.contributionId,
-          // We don't have full contribution data, so provide minimal info
-          created_at: new Date(), // Placeholder
-          validationStatus: 'pending' as const, // Default assumption
-          contributor: { username: 'Unknown', id: 0 },
-          datasetId: contribution.datasetId,
-          contributorId: 0,
-          dataType: contribution.dataType,
-          content: {},
-          metadata: {},
-          isActive: true,
-          updated_at: new Date(),
+    // Show loading state
+    this.snackBar.open('Loading similar contributions...', 'Close', {
+      duration: 2000,
+    });
+
+    // Fetch full contribution data for each similar contribution
+    const similarityPromises =
+      contribution.duplicateDetection.topSimilarities.map((similarity) =>
+        this.contributionService
+          .getContributionById(similarity.contributionId)
+          .pipe(
+            map((response) => ({
+              contributionId: similarity.contributionId,
+              similarity: similarity.similarity,
+              contentExcerpt: similarity.contentExcerpt,
+              contribution: response.data.contribution,
+            })),
+            // Handle individual errors gracefully
+            catchError((error) => {
+              console.error(
+                `Error fetching contribution ${similarity.contributionId}:`,
+                error
+              );
+              // Return a fallback object with minimal data
+              return of({
+                contributionId: similarity.contributionId,
+                similarity: similarity.similarity,
+                contentExcerpt: similarity.contentExcerpt,
+                contribution: {
+                  id: similarity.contributionId,
+                  created_at: new Date(),
+                  validationStatus: 'pending' as const,
+                  contributor: { username: 'Unknown', id: 0 },
+                  datasetId: contribution.datasetId,
+                  contributorId: 0,
+                  dataType: contribution.dataType,
+                  content: {},
+                  metadata: {},
+                  isActive: true,
+                  updated_at: new Date(),
+                },
+              });
+            })
+          )
+      );
+
+    // Wait for all requests to complete
+    forkJoin(similarityPromises)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (duplicates) => {
+          const dialogRef = this.dialog.open(DuplicateDialogComponent, {
+            width: '700px',
+            maxWidth: '90vw',
+            data: {
+              type:
+                contribution.duplicateDetection.highSimilarityCount > 0
+                  ? 'warning'
+                  : 'info',
+              duplicates,
+              title: 'Similar Contributions in Validation Queue',
+              message: `This contribution has ${duplicates.length} similar contribution(s). Consider this when making your validation decision.`,
+            },
+            disableClose: false,
+          });
+
+          dialogRef.afterClosed().subscribe((result) => {
+            if (result?.action === 'view' && result.contributionId) {
+              // Could navigate to the specific contribution or handle as needed
+              this.snackBar.open(
+                `Viewing contribution ${result.contributionId}`,
+                'Close',
+                {
+                  duration: 3000,
+                }
+              );
+            }
+          });
         },
-      })
-    );
-
-    const dialogRef = this.dialog.open(DuplicateDialogComponent, {
-      width: '700px',
-      maxWidth: '90vw',
-      data: {
-        type:
-          contribution.duplicateDetection.highSimilarityCount > 0
-            ? 'warning'
-            : 'info',
-        duplicates,
-        title: 'Similar Contributions in Validation Queue',
-        message: `This contribution has ${duplicates.length} similar contribution(s). Consider this when making your validation decision.`,
-      },
-      disableClose: false,
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.action === 'view' && result.contributionId) {
-        // Could navigate to the specific contribution or handle as needed
-        this.snackBar.open(
-          `Viewing contribution ${result.contributionId}`,
-          'Close',
-          {
-            duration: 3000,
-          }
-        );
-      }
-    });
+        error: (error) => {
+          console.error('Error loading similar contributions:', error);
+          this.snackBar.open('Failed to load similar contributions', 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar'],
+          });
+        },
+      });
   }
 
   // Add this helper method to determine validation priority based on duplicates:

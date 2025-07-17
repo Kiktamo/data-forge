@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -38,7 +38,7 @@ export class RegisterComponent {
   hidePassword = true;
   hideConfirmPassword = true;
   
-  constructor(private fb: FormBuilder, private authService: AuthService) {
+  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router) {
     // First step - account information
     this.accountForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -77,7 +77,7 @@ export class RegisterComponent {
       delete registrationData.confirmPassword;
       
       this.authService.register(registrationData.username, registrationData.email, registrationData.password, registrationData.fullName, registrationData?.bio).subscribe(
-        response => { console.log('Registration successful', response); this.isLoading = false; },
+        response => { console.log('Registration successful', response); this.isLoading = false; this.router.navigate(['/']); },
         error => { console.error('Registration failed', error); this.isLoading = false; });
     } else {
       // Mark all form controls as touched to trigger validation messages

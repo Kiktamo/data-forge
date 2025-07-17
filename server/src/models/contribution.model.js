@@ -105,7 +105,7 @@ Contribution.prototype.toSafeObject = function() {
   const {
     id, datasetId, contributorId, dataType, content, metadata,
     validationStatus, validatedBy, validationNotes, qualityScore,
-    isActive, created_at, updated_at
+    isActive, createdAt, updatedAt, created_at, updated_at
   } = this;
   
   // Include contributor information if it exists
@@ -138,7 +138,7 @@ Contribution.prototype.toSafeObject = function() {
   const baseObject = {
     id, datasetId, contributorId, dataType, content, metadata,
     validationStatus, validatedBy, validationNotes, qualityScore,
-    isActive, created_at, updated_at,
+    isActive, createdAt, updatedAt, created_at, updated_at,
     contributor: contributorData,
     dataset: datasetData
   };

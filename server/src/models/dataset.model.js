@@ -88,7 +88,7 @@ Dataset.prototype.toSafeObject = function() {
   const {
     id, name, description, ownerId, visibility, dataType,
     currentVersion, tags, contributionCount, validationCount,
-    isActive, created_at, updated_at
+    isActive, createdAt, updatedAt, created_at, updated_at
   } = this;
   
   // Include owner information if it exists
@@ -102,10 +102,10 @@ Dataset.prototype.toSafeObject = function() {
     id, name, description, ownerId, visibility, dataType,
     currentVersion, tags, contributionCount, validationCount,
     isActive, 
-    createdAt: created_at,
-    updatedAt: updated_at,
-    created_at, 
-    updated_at,
+    createdAt,
+    updatedAt,
+    created_at: createdAt, 
+    updated_at: updatedAt,
     owner: ownerData
   };
 };

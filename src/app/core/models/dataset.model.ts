@@ -49,6 +49,9 @@ export interface DatasetStatsResponse {
   success: boolean;
   data: {
     stats: {
+      updatedAt: any;
+      updated_at: any;
+      createdAt: string | number | Date;
       totalContributions: number;
       validatedContributions: number;
       pendingValidations: number;

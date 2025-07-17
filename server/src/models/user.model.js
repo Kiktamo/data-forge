@@ -164,6 +164,10 @@ User.prototype.toSafeObject = function () {
     bio,
     profileImageUrl,
     roles,
+    emailVerified,
+    email_verified,
+    createdAt,
+    updatedAt,
     created_at,
     updated_at,
   } = this;
@@ -176,8 +180,11 @@ User.prototype.toSafeObject = function () {
     bio,
     profileImageUrl,
     roles,
-    created_at,
-    updated_at,
+    emailVerified,
+    createdAt,
+    updatedAt,
+    created_at: createdAt,
+    updated_at: updatedAt,
   };
 };
 

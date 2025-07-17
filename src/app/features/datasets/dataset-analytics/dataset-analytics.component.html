@@ -52,6 +52,7 @@
         </mat-card>
 
         <!-- Duplicate Detection -->
+        <ng-container *ngIf="authService.hasRole('admin')">
         <mat-card class="analytics-card duplicates-card">
           <mat-card-content>
             <div class="metric-header">
@@ -69,6 +70,7 @@
             </div>
           </mat-card-content>
         </mat-card>
+        </ng-container>
 
         <!-- Contributors -->
         <mat-card class="analytics-card contributors-card">
@@ -266,6 +268,7 @@
         </mat-tab>
 
         <!-- Duplicate Analysis -->
+        <ng-container *ngIf="authService.hasRole('admin')">
         <mat-tab label="Duplicate Analysis">
           <div class="tab-content">
             
@@ -341,6 +344,7 @@
 
           </div>
         </mat-tab>
+        </ng-container>
 
         <!-- Contributors -->
         <mat-tab label="Contributors">

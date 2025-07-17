@@ -187,6 +187,7 @@ export class AuthService {
     return this.http.get<AuthResponse>(`${this.apiUrl}/profile`).pipe(
       map((response) => {
         if (response.success && response.user) {
+          // console.log('Fetched user profile:', response.user);
           this.currentUserSubject.next(response.user);
           return response.user;
         } else {
